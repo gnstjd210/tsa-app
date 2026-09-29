@@ -79,7 +79,12 @@ function AppContent() {
     }
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+    } catch (err) {
+      console.warn('Supabase signout notice:', err);
+    }
     setCurrentUser(null);
     sessionStorage.removeItem('tsa_admin_auth');
     localStorage.removeItem('tsa_admin_auth');

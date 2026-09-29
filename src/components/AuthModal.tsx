@@ -22,6 +22,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   // Login Form Fields
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
+  const [rememberEmail, setRememberEmail] = useState(false);
 
   // Signup Form Fields
   const [signupTeamName, setSignupTeamName] = useState('');
@@ -38,11 +39,25 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const hasSpecial = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(signupPassword);
   const isPasswordValid = isMinLength && hasLetter && hasNumber && hasSpecial;
 
-  // Sync mode with initialMode prop whenever modal is opened
+  // Sync mode and pre-fill remembered email whenever modal is opened
   useEffect(() => {
     if (isOpen) {
       setMode(initialMode);
       setLoading(false);
+
+      // Force wipe password states on open to prevent stale memory leak
+      setLoginPassword('');
+      setSignupPassword('');
+
+      // Check LocalStorage for remembered email (Requirement 1)
+      const savedEmail = localStorage.getItem('tsa_remembered_email');
+      if (savedEmail) {
+        setLoginEmail(savedEmail);
+        setRememberEmail(true);
+      } else {
+        setLoginEmail('');
+        setRememberEmail(false);
+      }
     }
   }, [isOpen, initialMode]);
 
@@ -54,12 +69,22 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     const passwordInput = loginPassword.trim();
     if (!rawInput || !passwordInput) return;
 
+    // Requirement 1: LocalStorage Remember Email sync
+    if (rememberEmail) {
+      localStorage.setItem('tsa_remembered_email', rawInput);
+    } else {
+      localStorage.removeItem('tsa_remembered_email');
+    }
+
     setLoading(true);
 
     setTimeout(() => {
       setLoading(false);
 
-      // Requirement 1 & 2: Admin Backdoor Shortcut Check ('admin' or 'tsa123' & password '2341')
+      // Always clear password state after submission
+      setLoginPassword('');
+
+      // Admin Backdoor Shortcut Check ('admin' or 'tsa123' & password '2341')
       const isAdminShortcut =
         (rawInput.toLowerCase() === 'admin' || rawInput.toLowerCase() === 'tsa123') &&
         passwordInput === '2341';
@@ -71,7 +96,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         return;
       }
 
-      // Requirement 4: Regular user email format validation check
+      // Regular user email format validation check
       if (!rawInput.includes('@')) {
         alert('올바른 이메일 형식을 입력해 주세요 (예: name@example.com).');
         return;
@@ -102,6 +127,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       await createProfile(signupEmail.trim(), signupTeamName.trim(), 'user');
       // Instant login & session creation
       if (onSuccess) onSuccess(signupEmail.trim(), signupTeamName.trim(), false);
+
+      // Reset signup fields & close
+      setSignupPassword('');
+      setSignupEmail('');
+      setSignupTeamName('');
       onClose();
       alert(`[${signupTeamName.trim()}] 회원가입이 완료되었습니다! (관리자 승인 후 공식 참가팀으로 연동됩니다)`);
     } catch (err) {
@@ -116,7 +146,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fadeIn">
       <div className="glass-panel w-full max-w-sm rounded-2xl p-6 border border-slate-800 shadow-2xl relative">
         <button
-          onClick={onClose}
+          onClick={() => {
+            setLoginPassword('');
+            setSignupPassword('');
+            onClose();
+          }}
           className="absolute top-4 right-4 text-slate-400 hover:text-white p-1.5 rounded-lg hover:bg-slate-800 transition-colors"
         >
           <X className="w-5 h-5" />
@@ -139,7 +173,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
         {/* MODE 1: LOGIN FORM */}
         {mode === 'login' ? (
-          <form noValidate onSubmit={handleLoginSubmit} className="space-y-3.5 text-xs">
+          <form noValidate autoComplete="off" onSubmit={handleLoginSubmit} className="space-y-3.5 text-xs">
             <div>
               <label className="block text-slate-300 font-semibold mb-1">이메일 주소</label>
               <div className="relative">
@@ -147,7 +181,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 <input
                   type="text"
                   autoCapitalize="none"
-                  autoComplete="username"
+                  autoComplete="off"
                   required
                   placeholder="name@example.com"
                   value={loginEmail}
@@ -163,6 +197,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 <Lock className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
                 <input
                   type="password"
+                  autoComplete="new-password"
                   required
                   placeholder="••••••••"
                   value={loginPassword}
@@ -170,6 +205,24 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   className="w-full bg-slate-900 border border-slate-800 rounded-xl pl-9 pr-3 py-2.5 text-white focus:outline-none focus:border-orange-500 transition-colors"
                 />
               </div>
+            </div>
+
+            {/* Requirement 1: Remember Email Checkbox */}
+            <div className="pt-1 flex items-center justify-between">
+              <button
+                type="button"
+                onClick={() => setRememberEmail(!rememberEmail)}
+                className="flex items-center space-x-2 text-left cursor-pointer text-slate-300 hover:text-white"
+              >
+                {rememberEmail ? (
+                  <CheckSquare className="w-4 h-4 text-orange-500 flex-shrink-0" />
+                ) : (
+                  <Square className="w-4 h-4 text-slate-600 flex-shrink-0" />
+                )}
+                <span className="text-[11px] font-semibold leading-tight">
+                  이메일 기억하기 (Remember Email)
+                </span>
+              </button>
             </div>
 
             <button
