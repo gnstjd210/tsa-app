@@ -6,7 +6,7 @@ interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
   initialMode?: 'login' | 'signup';
-  onSuccess?: (userEmail: string, teamName?: string) => void;
+  onSuccess?: (userEmail: string, teamName?: string, isAdmin?: boolean) => void;
 }
 
 export const AuthModal: React.FC<AuthModalProps> = ({
@@ -42,14 +42,37 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
   const handleLoginSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!loginEmail.trim() || !loginPassword.trim()) return;
+    const rawInput = loginEmail.trim();
+    const passwordInput = loginPassword.trim();
+    if (!rawInput || !passwordInput) return;
+
     setLoading(true);
 
     setTimeout(() => {
       setLoading(false);
-      if (onSuccess) onSuccess(loginEmail);
+
+      // Requirement 1 & 2: Admin Backdoor Shortcut Check ('admin' or 'tsa123' & password '2341')
+      const isAdminShortcut =
+        (rawInput.toLowerCase() === 'admin' || rawInput.toLowerCase() === 'tsa123') &&
+        passwordInput === '2341';
+
+      if (isAdminShortcut) {
+        const masterAdminEmail = 'admin@tsacup.com';
+        if (onSuccess) onSuccess(masterAdminEmail, 'TSA 최고 관리자', true);
+        onClose();
+        return;
+      }
+
+      // Requirement 4: Regular user email format validation check
+      if (!rawInput.includes('@')) {
+        alert('올바른 이메일 형식을 입력해 주세요 (예: name@example.com).');
+        return;
+      }
+
+      // Regular User Login Flow
+      if (onSuccess) onSuccess(rawInput, undefined, false);
       onClose();
-    }, 500);
+    }, 400);
   };
 
   const handleSignupSubmit = async (e: React.FormEvent) => {
@@ -106,7 +129,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               <div className="relative">
                 <Mail className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
                 <input
-                  type="email"
+                  type="text"
                   required
                   placeholder="name@example.com"
                   value={loginEmail}

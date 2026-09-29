@@ -56,11 +56,16 @@ function AppContent() {
     setShowAuthModal(true);
   };
 
-  const handleAuthSuccess = (email: string) => {
+  const handleAuthSuccess = (email: string, _teamName?: string, isAdmin?: boolean) => {
     setCurrentUser(email);
-    if (email.toLowerCase().includes('admin')) {
+    const isMasterAdmin = isAdmin || email === 'admin@tsacup.com' || email.toLowerCase().includes('admin');
+    
+    if (isMasterAdmin) {
       sessionStorage.setItem('tsa_admin_auth', 'true');
       localStorage.setItem('tsa_admin_auth', 'true');
+      window.history.pushState({}, '', '/admin');
+      setIsAdminRoute(true);
+      alert('🔑 [최고 관리자 인증] 대표님 환영합니다! 어드민 대시보드(/admin)로 즉시 이동합니다.');
     }
   };
 
