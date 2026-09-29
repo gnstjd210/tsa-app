@@ -584,6 +584,22 @@ export async function createProfile(email: string, teamName?: string, role: 'use
   }
 }
 
+export async function getProfileByEmail(email: string): Promise<Profile | null> {
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('email', email)
+      .order('created_at', { ascending: false })
+      .limit(1);
+    if (error || !data || data.length === 0) return null;
+    return data[0] as Profile;
+  } catch (err) {
+    console.warn('Failed to fetch profile by email:', err);
+    return null;
+  }
+}
+
 // Posts / CMS API (Instruction 5: Admin CMS Posts Management)
 export async function getPosts() {
   try {

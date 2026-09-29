@@ -8,6 +8,7 @@ interface HeaderProps {
   currentUser?: string | null;
   onLogout?: () => void;
   isAdminRoute?: boolean;
+  onNavigateMyPage?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -15,7 +16,8 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenMemberManagement,
   currentUser,
   onLogout,
-  isAdminRoute = false
+  isAdminRoute = false,
+  onNavigateMyPage
 }) => {
   const { sponsorTitle } = useSupabaseData();
 
@@ -74,9 +76,9 @@ export const Header: React.FC<HeaderProps> = ({
             ) : currentUser ? (
               <div className="flex items-center space-x-1.5">
                 <button
-                  onClick={() => alert(`👤 내 프로필 정보\n계정: ${currentUser}`)}
-                  className="px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-200 text-xs font-semibold flex items-center space-x-1 hover:border-orange-500/50 transition-all max-w-[120px] truncate"
-                  title="마이페이지 (내 프로필)"
+                  onClick={onNavigateMyPage}
+                  className="px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-200 text-xs font-semibold flex items-center space-x-1 hover:border-orange-500/50 transition-all max-w-[120px] truncate cursor-pointer"
+                  title="마이페이지 (/mypage) 이동"
                 >
                   <User className="w-3.5 h-3.5 text-orange-400 flex-shrink-0" />
                   <span className="truncate">{currentUser.split('@')[0]}</span>

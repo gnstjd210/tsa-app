@@ -98,16 +98,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
     try {
       setLoading(true);
-      // 1. Insert Profile into Supabase profiles table
+      // Requirement 2: Insert ONLY into profiles table. DO NOT insert into official teams table.
       await createProfile(signupEmail.trim(), signupTeamName.trim(), 'user');
-      // 2. Add Team to teams table
-      await addTeam(signupTeamName.trim());
-      // 3. Skip email OTP wait delay & instant login
+      // Instant login & session creation
       if (onSuccess) onSuccess(signupEmail.trim(), signupTeamName.trim(), false);
       onClose();
-      alert(`[${signupTeamName.trim()}] 팀 회원가입 및 프로필 생성이 성공적으로 완료되었습니다!`);
+      alert(`[${signupTeamName.trim()}] 회원가입이 완료되었습니다! (관리자 승인 후 공식 참가팀으로 연동됩니다)`);
     } catch (err) {
-      console.error('Signup team/profile creation error:', err);
+      console.error('Signup profile creation error:', err);
       alert('회원가입 처리 중 오류가 발생했습니다.');
     } finally {
       setLoading(false);

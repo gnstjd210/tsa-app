@@ -6,16 +6,18 @@ import { AnnouncementsTab } from './components/tabs/AnnouncementsTab';
 import { GroupStandingsTab } from './components/tabs/GroupStandingsTab';
 import { MatchScheduleTab } from './components/tabs/MatchScheduleTab';
 import { TeamInfoTab } from './components/tabs/TeamInfoTab';
+import { MyPageTab } from './components/tabs/MyPageTab';
 import { AdminPanel } from './components/admin/AdminPanel';
 import { MemberManagementModal } from './components/admin/MemberManagementModal';
 import { AuthModal } from './components/AuthModal';
 import { SupabaseProvider, useSupabaseData } from './context/SupabaseContext';
-import { CheckCircle2, Sparkles, RefreshCw } from 'lucide-react';
+import { Sparkles } from 'lucide-react';
 
 function AppContent() {
   const { refreshing, refreshAllData } = useSupabaseData();
   const [activeTab, setActiveTab] = useState<TabType>('home');
   const [isAdminRoute, setIsAdminRoute] = useState<boolean>(false);
+  const [isMyPageRoute, setIsMyPageRoute] = useState<boolean>(false);
 
   // User Auth & Admin Member Modal State
   const [showAuthModal, setShowAuthModal] = useState<boolean>(false);
@@ -27,6 +29,7 @@ function AppContent() {
     const checkRoute = () => {
       const path = window.location.pathname;
       const isTargetingAdmin = path === '/admin' || path.startsWith('/admin') || window.location.hash === '#admin';
+      const isTargetingMyPage = path === '/mypage' || path.startsWith('/mypage') || window.location.hash === '#mypage';
       
       if (isTargetingAdmin) {
         const isAdminAuthenticated =
@@ -37,12 +40,18 @@ function AppContent() {
           // Protected Route Guard: Immediately eject unauthenticated direct URL access back to '/'
           window.history.replaceState({}, '', '/');
           setIsAdminRoute(false);
+          setIsMyPageRoute(false);
           alert('🔒 [보안 방어] 관리자 접근 권한이 없습니다. 메인 화면(/)으로 즉시 이동(Redirect)되었습니다.');
           return;
         }
         setIsAdminRoute(true);
+        setIsMyPageRoute(false);
+      } else if (isTargetingMyPage) {
+        setIsAdminRoute(false);
+        setIsMyPageRoute(true);
       } else {
         setIsAdminRoute(false);
+        setIsMyPageRoute(false);
       }
     };
 
@@ -65,6 +74,7 @@ function AppContent() {
       localStorage.setItem('tsa_admin_auth', 'true');
       window.history.pushState({}, '', '/admin');
       setIsAdminRoute(true);
+      setIsMyPageRoute(false);
       alert('🔑 [최고 관리자 인증] 대표님 환영합니다! 어드민 대시보드(/admin)로 즉시 이동합니다.');
     }
   };
@@ -74,6 +84,13 @@ function AppContent() {
     sessionStorage.removeItem('tsa_admin_auth');
     localStorage.removeItem('tsa_admin_auth');
     window.history.replaceState({}, '', '/');
+    setIsAdminRoute(false);
+    setIsMyPageRoute(false);
+  };
+
+  const navigateToMyPage = () => {
+    window.history.pushState({}, '', '/mypage');
+    setIsMyPageRoute(true);
     setIsAdminRoute(false);
   };
 
@@ -90,6 +107,7 @@ function AppContent() {
         localStorage.setItem('tsa_admin_auth', 'true');
         window.history.pushState({}, '', '/admin');
         setIsAdminRoute(true);
+        setIsMyPageRoute(false);
         alert('🔑 관리자 인증 성공! 대시보드로 이동합니다.');
       } else if (pwd !== null) {
         alert('❌ 관리자 비밀번호가 일치하지 않습니다.');
@@ -97,6 +115,7 @@ function AppContent() {
     } else {
       window.history.pushState({}, '', '/admin');
       setIsAdminRoute(true);
+      setIsMyPageRoute(false);
     }
   };
 
@@ -104,12 +123,22 @@ function AppContent() {
     e.preventDefault();
     window.history.pushState({}, '', '/');
     setIsAdminRoute(false);
+    setIsMyPageRoute(false);
+  };
+
+  const handleTabChange = (tab: TabType) => {
+    if (isAdminRoute || isMyPageRoute) {
+      window.history.pushState({}, '', '/');
+      setIsAdminRoute(false);
+      setIsMyPageRoute(false);
+    }
+    setActiveTab(tab);
   };
 
   const renderActiveTab = () => {
     switch (activeTab) {
       case 'home':
-        return <HomeTab onNavigateTab={(tab) => setActiveTab(tab)} />;
+        return <HomeTab onNavigateTab={(tab) => handleTabChange(tab)} />;
       case 'announcements':
         return <AnnouncementsTab isAdmin={isAdminRoute} />;
       case 'standings':
@@ -117,63 +146,44 @@ function AppContent() {
       case 'schedule':
         return <MatchScheduleTab isAdmin={isAdminRoute} />;
       case 'teams':
-        return <TeamInfoTab isAdmin={isAdminRoute} />;
+        return <TeamInfoTab />;
       default:
-        return <HomeTab onNavigateTab={(tab) => setActiveTab(tab)} />;
+        return <HomeTab onNavigateTab={(tab) => handleTabChange(tab)} />;
     }
   };
 
   return (
     <div className="min-h-screen bg-sports-pattern flex flex-col pb-20 md:pb-8">
-      {/* Restored Header with TSA title, sponsor text, login/signup buttons or admin member button */}
+      {/* Header */}
       <Header
         onOpenAuth={handleOpenAuth}
         onOpenMemberManagement={() => setShowMemberModal(true)}
         currentUser={currentUser}
         onLogout={handleLogout}
         isAdminRoute={isAdminRoute}
+        onNavigateMyPage={navigateToMyPage}
       />
 
       {/* 5 Tabs Navigation */}
-      <Navigation activeTab={activeTab} setActiveTab={setActiveTab} />
+      <Navigation activeTab={activeTab} setActiveTab={handleTabChange} />
 
       {/* Main Content Viewport */}
       <main className="flex-1 max-w-md w-full mx-auto px-4 py-4 space-y-4">
-        {/* Admin Dashboard if on /admin Route (No Red Warning Banner) */}
+        {/* Admin Dashboard if on /admin Route */}
         {isAdminRoute ? (
           <AdminPanel
-            onNavigateTab={(tab) => setActiveTab(tab)}
+            onNavigateTab={(tab) => handleTabChange(tab)}
             onManualSeed={refreshAllData}
             seeding={refreshing}
           />
+        ) : isMyPageRoute ? (
+          <MyPageTab currentUser={currentUser} />
         ) : (
-          <div className="glass-panel rounded-xl p-3 border border-emerald-500/30 flex items-center justify-between text-xs bg-emerald-500/5">
-            <div className="flex items-center space-x-2">
-              <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
-              <div>
-                <span className="font-bold text-emerald-300">1회 women Tournament (이데일리 컵)</span>
-                <span className="text-[10px] text-slate-400 block truncate max-w-[160px] sm:max-w-none">
-                  Supabase DB & Storage 실시간 연동 완료
-                </span>
-              </div>
-            </div>
-
-            <button
-              onClick={refreshAllData}
-              disabled={refreshing}
-              className="flex items-center space-x-1 px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-800 text-slate-300 hover:text-white text-[11px] active-press transition-all whitespace-nowrap"
-              title="데이터 동기화"
-            >
-              <RefreshCw className={`w-3 h-3 ${refreshing ? 'animate-spin text-orange-400' : 'text-slate-400'}`} />
-              <span>동기화</span>
-            </button>
+          /* Active Tab Content (Clean layout with NO admin sync box on general user UI) */
+          <div className="transition-all duration-300">
+            {renderActiveTab()}
           </div>
         )}
-
-        {/* Active Tab Content */}
-        <div className="transition-all duration-300">
-          {renderActiveTab()}
-        </div>
 
         {/* Platform Footer */}
         <footer className="pt-6 text-center border-t border-slate-900 space-y-2">
@@ -183,9 +193,9 @@ function AppContent() {
           </div>
 
           <div className="text-[10px] text-slate-600">
-            {isAdminRoute ? (
-              <a href="/" onClick={navigateToHome} className="hover:underline">
-                [일반 사용자 메인화면으로 이동]
+            {isAdminRoute || isMyPageRoute ? (
+              <a href="/" onClick={navigateToHome} className="hover:underline text-slate-400">
+                [일반 사용자 메인화면(/)으로 이동]
               </a>
             ) : (
               <a href="/admin" onClick={navigateToAdmin} className="hover:underline text-slate-600">
