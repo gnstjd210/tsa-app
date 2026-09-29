@@ -123,13 +123,15 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
         {/* MODE 1: LOGIN FORM */}
         {mode === 'login' ? (
-          <form onSubmit={handleLoginSubmit} className="space-y-3.5 text-xs">
+          <form noValidate onSubmit={handleLoginSubmit} className="space-y-3.5 text-xs">
             <div>
               <label className="block text-slate-300 font-semibold mb-1">이메일 주소</label>
               <div className="relative">
                 <Mail className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
                 <input
                   type="text"
+                  autoCapitalize="none"
+                  autoComplete="username"
                   required
                   placeholder="name@example.com"
                   value={loginEmail}
