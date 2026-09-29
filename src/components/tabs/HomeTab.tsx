@@ -15,6 +15,17 @@ interface SponsorItem {
   dbPostId?: string;
 }
 
+interface ScheduleItem {
+  id: string;
+  dbPostId?: string;
+  title: string;
+  date: string;
+  location: string;
+  status: string;
+  participants: string;
+  highlight?: boolean;
+}
+
 interface HomeTabProps {
   onNavigateTab: (tab: any) => void;
   isAdmin?: boolean;
@@ -23,7 +34,7 @@ interface HomeTabProps {
 export const HomeTab: React.FC<HomeTabProps> = ({ onNavigateTab, isAdmin = false }) => {
   const { posts, addPost, editPost, removePost } = useSupabaseData();
 
-  // Regular User Detail Modal State
+  // Regular User Detail Modal State for Sponsor
   const [selectedSponsor, setSelectedSponsor] = useState<SponsorItem | null>(null);
 
   // Admin Sponsor Inline CRUD Modal State
@@ -33,6 +44,16 @@ export const HomeTab: React.FC<HomeTabProps> = ({ onNavigateTab, isAdmin = false
   const [sponsorEditDescription, setSponsorEditDescription] = useState('');
   const [sponsorEditLink, setSponsorEditLink] = useState('');
   const [savingSponsorEdit, setSavingSponsorEdit] = useState(false);
+
+  // Requirement 1: Admin Schedule Inline CRUD Modal State
+  const [adminScheduleModal, setAdminScheduleModal] = useState<ScheduleItem | null>(null);
+  const [scheduleEditTitle, setScheduleEditTitle] = useState('');
+  const [scheduleEditDate, setScheduleEditDate] = useState('');
+  const [scheduleEditLocation, setScheduleEditLocation] = useState('');
+  const [scheduleEditStatus, setScheduleEditStatus] = useState('진행 중');
+  const [scheduleEditParticipants, setScheduleEditParticipants] = useState('');
+  const [scheduleEditHighlight, setScheduleEditHighlight] = useState(false);
+  const [savingScheduleEdit, setSavingScheduleEdit] = useState(false);
 
   // Admin CMS Form State
   const [showCmsForm, setShowCmsForm] = useState(false);
@@ -102,21 +123,132 @@ export const HomeTab: React.FC<HomeTabProps> = ({ onNavigateTab, isAdmin = false
     }))
   ];
 
-  // Click Handler for Sponsor Box based on role (Requirement 2)
+  // Default Schedule Items
+  const defaultSchedule: ScheduleItem[] = [
+    {
+      id: '1',
+      title: '1회 women Tournament (이데일리 컵)',
+      date: '2026. 10. 01 ~ 10. 15',
+      location: '해누리체육공원 풋살장',
+      status: '진행 중',
+      participants: '총 48개 팀 (1조 ~ 6조)',
+      highlight: true
+    },
+    {
+      id: '2',
+      title: 'TSA 윈터 마스터즈 챔피언십',
+      date: '2026. 12. 05 ~ 12. 20',
+      location: 'TSA 메인 실내 에어돔구장',
+      status: '접수 예정',
+      participants: '선착순 32개 팀 모집 예정',
+      highlight: false
+    },
+    {
+      id: '3',
+      title: '2027 TSA 전국 아마추어 유소년/여성 리그',
+      date: '2027. 03. 10 ~ 04. 30',
+      location: '서울/경기 주요 체육공원',
+      status: '기획 중',
+      participants: '전국 단위 클럽 대항전',
+      highlight: false
+    }
+  ];
+
+  // Merge DB Schedule Posts into Schedule Items
+  const dbSchedulePosts = (posts || []).filter(p => p.category === '향후 대회 일정');
+  const mergedSchedule: ScheduleItem[] = [
+    ...defaultSchedule,
+    ...dbSchedulePosts.map(p => ({
+      id: p.id,
+      dbPostId: p.id,
+      title: p.title,
+      date: '일정 확인',
+      location: 'TSA 지정 구장',
+      status: p.is_pinned ? '주요 대회' : '접수 예정',
+      participants: p.content,
+      highlight: !!p.is_pinned
+    }))
+  ];
+
+  // Requirement 1: Click Handler for Schedule Box (Admin Inline CRUD)
+  const handleScheduleClick = (item: ScheduleItem) => {
+    if (isAdmin) {
+      setAdminScheduleModal(item);
+      setScheduleEditTitle(item.title);
+      setScheduleEditDate(item.date);
+      setScheduleEditLocation(item.location);
+      setScheduleEditStatus(item.status);
+      setScheduleEditParticipants(item.participants);
+      setScheduleEditHighlight(!!item.highlight);
+    }
+  };
+
+  // Save Admin Schedule Edit
+  const handleSaveAdminSchedule = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!adminScheduleModal || !scheduleEditTitle.trim()) return;
+
+    try {
+      setSavingScheduleEdit(true);
+      const combinedContent = `일시: ${scheduleEditDate}\n장소: ${scheduleEditLocation}\n참가: ${scheduleEditParticipants}`;
+
+      if (adminScheduleModal.dbPostId) {
+        await editPost(adminScheduleModal.dbPostId, {
+          category: '향후 대회 일정',
+          title: scheduleEditTitle.trim(),
+          content: combinedContent,
+          is_pinned: scheduleEditHighlight
+        });
+      } else {
+        await addPost({
+          category: '향후 대회 일정',
+          title: scheduleEditTitle.trim(),
+          content: combinedContent,
+          is_pinned: scheduleEditHighlight
+        });
+      }
+      setAdminScheduleModal(null);
+      alert(`[${scheduleEditTitle.trim()}] 대회 일정이 저장되었습니다!`);
+    } catch (err) {
+      console.error('Error saving schedule edit:', err);
+      alert('대회 일정 저장에 실패했습니다.');
+    } finally {
+      setSavingScheduleEdit(false);
+    }
+  };
+
+  // Delete Admin Schedule with Browser confirm()
+  const handleDeleteAdminSchedule = async () => {
+    if (!adminScheduleModal) return;
+    if (!window.confirm('정말 삭제하시겠습니까?')) return;
+
+    try {
+      setSavingScheduleEdit(true);
+      if (adminScheduleModal.dbPostId) {
+        await removePost(adminScheduleModal.dbPostId);
+      }
+      setAdminScheduleModal(null);
+      alert('대회 일정이 완전 삭제되었습니다.');
+    } catch (err) {
+      console.error('Error deleting schedule:', err);
+      alert('대회 일정 삭제에 실패했습니다.');
+    } finally {
+      setSavingScheduleEdit(false);
+    }
+  };
+
+  // Click Handler for Sponsor Box based on role
   const handleSponsorClick = (sponsor: SponsorItem) => {
     if (isAdmin) {
-      // Admin Role: Open Admin Inline CRUD Modal
       setAdminSponsorModal(sponsor);
       setSponsorEditName(sponsor.name);
       setSponsorEditBadge(sponsor.badge || 'OFFICIAL SPONSOR');
       setSponsorEditDescription(sponsor.description);
       setSponsorEditLink(sponsor.link || '');
     } else {
-      // Regular User Role: If URL exists, open homepage in new tab
       if (sponsor.link && sponsor.link.trim() !== '') {
         window.open(sponsor.link, '_blank', 'noopener,noreferrer');
       } else {
-        // Fallback: Open detail popup if no link
         setSelectedSponsor(sponsor);
       }
     }
@@ -130,7 +262,6 @@ export const HomeTab: React.FC<HomeTabProps> = ({ onNavigateTab, isAdmin = false
     try {
       setSavingSponsorEdit(true);
       if (adminSponsorModal.dbPostId) {
-        // Update existing DB Post
         await editPost(adminSponsorModal.dbPostId, {
           category: '스폰서/파트너십',
           title: sponsorEditName.trim(),
@@ -138,7 +269,6 @@ export const HomeTab: React.FC<HomeTabProps> = ({ onNavigateTab, isAdmin = false
           link: sponsorEditLink.trim() || undefined
         });
       } else {
-        // Add new DB Post for default sponsor
         await addPost({
           category: '스폰서/파트너십',
           title: sponsorEditName.trim(),
@@ -243,40 +373,9 @@ export const HomeTab: React.FC<HomeTabProps> = ({ onNavigateTab, isAdmin = false
     }
   };
 
-  // Upcoming Schedule Data
-  const upcomingSchedule = [
-    {
-      id: '1',
-      title: '1회 women Tournament (이데일리 컵)',
-      date: '2026. 10. 01 ~ 10. 15',
-      location: '해누리체육공원 풋살장',
-      status: '진행 중',
-      participants: '총 48개 팀 (1조 ~ 6조)',
-      highlight: true
-    },
-    {
-      id: '2',
-      title: 'TSA 윈터 마스터즈 챔피언십',
-      date: '2026. 12. 05 ~ 12. 20',
-      location: 'TSA 메인 실내 에어돔구장',
-      status: '접수 예정',
-      participants: '선착순 32개 팀 모집 예정',
-      highlight: false
-    },
-    {
-      id: '3',
-      title: '2027 TSA 전국 아마추어 유소년/여성 리그',
-      date: '2027. 03. 10 ~ 04. 30',
-      location: '서울/경기 주요 체육공원',
-      status: '기획 중',
-      participants: '전국 단위 클럽 대항전',
-      highlight: false
-    }
-  ];
-
   return (
     <div className="space-y-6 animate-fadeIn pb-4">
-      {/* Hero Welcome Banner */}
+      {/* Requirement 2: Hero Welcome Banner rendered on Regular User Home Screen */}
       <div className="relative rounded-3xl overflow-hidden glass-panel p-6 border border-orange-500/30 shadow-2xl bg-gradient-to-br from-slate-900 via-slate-950 to-orange-950/30">
         <div className="absolute top-0 right-0 -translate-y-4 translate-x-4 opacity-15">
           <Trophy className="w-48 h-48 text-orange-500" />
@@ -367,7 +466,6 @@ export const HomeTab: React.FC<HomeTabProps> = ({ onNavigateTab, isAdmin = false
                 </div>
               </div>
 
-              {/* Requirement 2: Conditional URL Field for Sponsor Category */}
               {cmsCategory === '스폰서/파트너십' && (
                 <div>
                   <label className="block text-slate-300 font-semibold mb-1 flex items-center justify-between">
@@ -423,7 +521,7 @@ export const HomeTab: React.FC<HomeTabProps> = ({ onNavigateTab, isAdmin = false
         </div>
       )}
 
-      {/* SECTION 1: 향후 TSA 대회 일정 (Upcoming Schedule Box) */}
+      {/* Requirement 1: SECTION 1: 향후 TSA 대회 일정 (Upcoming Schedule Box with Admin Inline CRUD) */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
@@ -435,13 +533,21 @@ export const HomeTab: React.FC<HomeTabProps> = ({ onNavigateTab, isAdmin = false
               </span>
             </h3>
           </div>
+          {isAdmin && (
+            <span className="text-[10px] font-bold text-orange-400 bg-orange-500/20 border border-orange-500/30 px-2 py-0.5 rounded-full">
+              관리자 모드: 일정 박스 클릭 시 수정/삭제
+            </span>
+          )}
         </div>
 
         <div className="space-y-2.5">
-          {upcomingSchedule.map((item) => (
+          {mergedSchedule.map((item) => (
             <div
               key={item.id}
-              className={`glass-panel rounded-2xl p-4 border transition-all hover:border-slate-700 ${
+              onClick={() => handleScheduleClick(item)}
+              className={`glass-panel rounded-2xl p-4 border transition-all ${
+                isAdmin ? 'cursor-pointer hover:border-orange-500/60' : 'hover:border-slate-700'
+              } ${
                 item.highlight
                   ? 'border-orange-500/40 bg-gradient-to-r from-orange-500/10 via-slate-900 to-slate-900'
                   : 'border-slate-800'
@@ -474,16 +580,23 @@ export const HomeTab: React.FC<HomeTabProps> = ({ onNavigateTab, isAdmin = false
                   </div>
                 </div>
 
-                {item.highlight && (
-                  <Flame className="w-5 h-5 text-orange-500 animate-bounce flex-shrink-0" />
-                )}
+                <div className="flex items-center space-x-2">
+                  {isAdmin ? (
+                    <span className="px-2.5 py-1 rounded-xl bg-orange-500 hover:bg-orange-400 text-white text-xs font-bold flex items-center gap-1 shadow-md">
+                      <Edit className="w-3.5 h-3.5" />
+                      <span>수정/삭제</span>
+                    </span>
+                  ) : item.highlight ? (
+                    <Flame className="w-5 h-5 text-orange-500 animate-bounce flex-shrink-0" />
+                  ) : null}
+                </div>
               </div>
             </div>
           ))}
         </div>
       </div>
 
-      {/* Requirement 2: SECTION 2: 스폰서 홍보용 게시글/배너 리스트 (Role-based actions & Inline CRUD) */}
+      {/* SECTION 2: 스폰서 홍보용 게시글/배너 리스트 (Role-based actions & Inline CRUD) */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
@@ -553,8 +666,8 @@ export const HomeTab: React.FC<HomeTabProps> = ({ onNavigateTab, isAdmin = false
         </div>
       </div>
 
-      {/* Dynamic CMS Posts Section (for General / Announcement / Schedule posts) */}
-      {posts && posts.filter(p => p.category !== '스폰서/파트너십').length > 0 && (
+      {/* Dynamic CMS Posts Section (for General / Announcement posts) */}
+      {posts && posts.filter(p => p.category !== '스폰서/파트너십' && p.category !== '향후 대회 일정').length > 0 && (
         <div className="space-y-3">
           <div className="flex items-center space-x-2">
             <div className="w-2 h-5 bg-orange-500 rounded-full" />
@@ -567,7 +680,7 @@ export const HomeTab: React.FC<HomeTabProps> = ({ onNavigateTab, isAdmin = false
           </div>
 
           <div className="space-y-2.5">
-            {posts.filter(p => p.category !== '스폰서/파트너십').map((post) => (
+            {posts.filter(p => p.category !== '스폰서/파트너십' && p.category !== '향후 대회 일정').map((post) => (
               <div
                 key={post.id}
                 className="glass-panel rounded-2xl p-4 border border-slate-800 hover:border-slate-700 transition-all space-y-2 relative"
@@ -610,7 +723,134 @@ export const HomeTab: React.FC<HomeTabProps> = ({ onNavigateTab, isAdmin = false
         </div>
       )}
 
-      {/* Requirement 2: Admin Sponsor Inline CRUD Modal Popup */}
+      {/* Requirement 1: Admin Schedule Inline CRUD Modal Popup */}
+      {adminScheduleModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
+          <div className="glass-panel w-full max-w-md rounded-2xl p-5 border border-orange-500/40 shadow-2xl space-y-4 bg-slate-900">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div className="flex items-center space-x-2 text-orange-400">
+                <ShieldCheck className="w-5 h-5" />
+                <h3 className="text-base font-bold text-white">[어드민] 향후 대회 일정 수정 / 삭제</h3>
+              </div>
+              <button
+                onClick={() => setAdminScheduleModal(null)}
+                className="text-slate-400 hover:text-white p-1 rounded-lg"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveAdminSchedule} className="space-y-3 text-xs">
+              <div>
+                <label className="block text-slate-300 font-semibold mb-1">대회 명칭 / 제목</label>
+                <input
+                  type="text"
+                  required
+                  value={scheduleEditTitle}
+                  onChange={(e) => setScheduleEditTitle(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-white focus:outline-none focus:border-orange-500"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-slate-300 font-semibold mb-1">대회 일시</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="예: 2026. 10. 01 ~ 10. 15"
+                    value={scheduleEditDate}
+                    onChange={(e) => setScheduleEditDate(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-white focus:outline-none focus:border-orange-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-slate-300 font-semibold mb-1">진행 상태</label>
+                  <select
+                    value={scheduleEditStatus}
+                    onChange={(e) => setScheduleEditStatus(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-white focus:outline-none focus:border-orange-500 font-bold"
+                  >
+                    <option value="진행 중">🔥 진행 중</option>
+                    <option value="접수 예정">📢 접수 예정</option>
+                    <option value="기획 중">📝 기획 중</option>
+                    <option value="종료">🏁 종료</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-slate-300 font-semibold mb-1">경기 장소</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="예: 해누리체육공원 풋살장"
+                  value={scheduleEditLocation}
+                  onChange={(e) => setScheduleEditLocation(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-white focus:outline-none focus:border-orange-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-300 font-semibold mb-1">참가 규모 및 안내사항</label>
+                <textarea
+                  required
+                  rows={3}
+                  placeholder="예: 선착순 32개 팀 모집 예정"
+                  value={scheduleEditParticipants}
+                  onChange={(e) => setScheduleEditParticipants(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-white focus:outline-none focus:border-orange-500"
+                />
+              </div>
+
+              <div className="flex items-center space-x-2 pt-1">
+                <input
+                  type="checkbox"
+                  id="scheduleHighlight"
+                  checked={scheduleEditHighlight}
+                  onChange={(e) => setScheduleEditHighlight(e.target.checked)}
+                  className="w-4 h-4 accent-orange-500 rounded cursor-pointer"
+                />
+                <label htmlFor="scheduleHighlight" className="text-slate-300 font-medium cursor-pointer">
+                  주요 대회 강조 (불꽃 애니메이션 표시)
+                </label>
+              </div>
+
+              <div className="flex items-center justify-between pt-3 gap-2 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={handleDeleteAdminSchedule}
+                  disabled={savingScheduleEdit}
+                  className="px-3 py-2.5 rounded-xl bg-red-600/20 hover:bg-red-600/30 text-red-400 border border-red-500/30 font-bold flex items-center space-x-1 transition-all"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  <span>일정 삭제</span>
+                </button>
+
+                <div className="flex space-x-2">
+                  <button
+                    type="button"
+                    onClick={() => setAdminScheduleModal(null)}
+                    className="px-3 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold"
+                  >
+                    취소
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={savingScheduleEdit}
+                    className="px-4 py-2.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-bold flex items-center space-x-1 shadow-md"
+                  >
+                    {savingScheduleEdit ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                    <span>수정 완료</span>
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Admin Sponsor Inline CRUD Modal Popup */}
       {adminSponsorModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
           <div className="glass-panel w-full max-w-md rounded-2xl p-5 border border-amber-500/40 shadow-2xl space-y-4 bg-slate-900">

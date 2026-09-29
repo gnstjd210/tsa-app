@@ -203,7 +203,7 @@ function AppContent() {
         <footer className="pt-6 text-center border-t border-slate-900 space-y-2">
           <div className="flex items-center justify-center space-x-2 text-slate-500 text-xs">
             <Sparkles className="w-3.5 h-3.5 text-orange-500" />
-            <span>TSA 1회 women Tournament (이데일리 컵) &copy; 2026</span>
+            <span>TNT SPORTS ACADEMY &copy; 2024</span>
           </div>
 
           <div className="text-[10px] text-slate-600">

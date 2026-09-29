@@ -254,11 +254,14 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
         </div>
       </div>
 
-      {/* Instruction 2: Sponsor Title Dynamic Management Form */}
+      {/* Requirement 2: Main Banner Update Only Form (No delete button allowed) */}
       <div className="w-full glass-panel p-4 rounded-2xl border border-orange-500/30 bg-slate-900/90 space-y-2">
-        <div className="flex items-center space-x-2 text-xs font-bold text-orange-400">
-          <Sparkles className="w-4 h-4 text-amber-400" />
-          <span>[동적 관리] 메인 스폰서 타이틀 수정 (Supabase tournaments 연동)</span>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-2 text-xs font-bold text-orange-400">
+            <Sparkles className="w-4 h-4 text-amber-400" />
+            <span>[메인 배너 설정] '이데일리컵 공식대회' 타이틀 수정 (수정 전용)</span>
+          </div>
+          <span className="text-[10px] text-slate-500 font-semibold">* 삭제 불가 (설정값 업데이트만 가능)</span>
         </div>
 
         <form onSubmit={handleSponsorTitleSave} className="flex space-x-2">
@@ -276,7 +279,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
             className="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white font-bold text-xs rounded-xl flex items-center space-x-1 shadow-md shadow-orange-500/20 active-press transition-all whitespace-nowrap"
           >
             <Save className="w-3.5 h-3.5" />
-            <span>{savingSponsor ? '저장 중...' : '타이틀 저장'}</span>
+            <span>{savingSponsor ? '저장 중...' : '배너 텍스트 저장'}</span>
           </button>
         </form>
       </div>
