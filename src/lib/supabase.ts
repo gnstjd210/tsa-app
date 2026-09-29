@@ -85,6 +85,7 @@ export interface Post {
   title: string;
   content: string;
   author?: string;
+  link?: string;
   is_pinned?: boolean;
   created_at?: string;
 }

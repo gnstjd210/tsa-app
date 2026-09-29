@@ -1,5 +1,5 @@
 import React from 'react';
-import { Trophy, LogIn, UserPlus, Sparkles, Users, User } from 'lucide-react';
+import { Trophy, LogIn, UserPlus, Sparkles, Users, User, ShieldCheck } from 'lucide-react';
 import { useSupabaseData } from '../context/SupabaseContext';
 
 interface HeaderProps {
@@ -8,8 +8,10 @@ interface HeaderProps {
   currentUser?: string | null;
   onLogout?: () => void;
   isAdminRoute?: boolean;
+  isAdminSession?: boolean;
   onNavigateMyPage?: () => void;
   onNavigateHome?: () => void;
+  onNavigateAdmin?: (e?: React.MouseEvent) => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -18,8 +20,10 @@ export const Header: React.FC<HeaderProps> = ({
   currentUser,
   onLogout,
   isAdminRoute = false,
+  isAdminSession = false,
   onNavigateMyPage,
-  onNavigateHome
+  onNavigateHome,
+  onNavigateAdmin
 }) => {
   const { sponsorTitle } = useSupabaseData();
 
@@ -56,9 +60,9 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
         </div>
 
-        {/* Sponsor & Auth / Admin Member Management Section */}
+        {/* Sponsor & Auth / Admin Section */}
         <div className="flex items-center space-x-2.5 flex-shrink-0">
-          {/* Instruction 2: Dynamic Sponsor Title from Supabase */}
+          {/* Dynamic Sponsor Title */}
           <div className="hidden sm:flex flex-col items-end justify-center px-2.5 py-1 rounded-xl bg-gradient-to-r from-orange-500/15 via-amber-500/10 to-transparent border border-orange-500/30 text-right leading-tight">
             <div className="flex items-center space-x-1 text-[10px] font-black text-orange-400 whitespace-nowrap">
               <Sparkles className="w-3 h-3 text-amber-400" />
@@ -69,12 +73,27 @@ export const Header: React.FC<HeaderProps> = ({
             </span>
           </div>
 
-          {/* User Auth Buttons OR Admin Member Management Button (Instruction 3) */}
+          {/* Fixed Admin Dashboard Button for Logged-In Admin */}
           <div className="flex items-center space-x-1.5 flex-shrink-0">
+            {isAdminSession && (
+              <button
+                onClick={onNavigateAdmin}
+                className={`px-2.5 py-1.5 rounded-xl text-xs font-bold flex items-center space-x-1 shadow-md transition-all cursor-pointer whitespace-nowrap ${
+                  isAdminRoute
+                    ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40'
+                    : 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 shadow-amber-500/20'
+                }`}
+                title="어드민 대시보드 (/admin) 이동"
+              >
+                <ShieldCheck className="w-3.5 h-3.5" />
+                <span>관리자 대시보드</span>
+              </button>
+            )}
+
             {isAdminRoute ? (
               <button
                 onClick={onOpenMemberManagement}
-                className="px-3 py-1.5 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-bold flex items-center space-x-1.5 shadow-md shadow-red-500/20 active-press transition-all whitespace-nowrap"
+                className="px-2.5 py-1.5 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-bold flex items-center space-x-1 shadow-md shadow-red-500/20 active-press transition-all whitespace-nowrap"
               >
                 <Users className="w-3.5 h-3.5" />
                 <span>회원 관리</span>
@@ -83,7 +102,7 @@ export const Header: React.FC<HeaderProps> = ({
               <div className="flex items-center space-x-1.5">
                 <button
                   onClick={onNavigateMyPage}
-                  className="px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-200 text-xs font-semibold flex items-center space-x-1 hover:border-orange-500/50 transition-all max-w-[120px] truncate cursor-pointer"
+                  className="px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-200 text-xs font-semibold flex items-center space-x-1 hover:border-orange-500/50 transition-all max-w-[100px] truncate cursor-pointer"
                   title="마이페이지 (/mypage) 이동"
                 >
                   <User className="w-3.5 h-3.5 text-orange-400 flex-shrink-0" />
@@ -92,7 +111,7 @@ export const Header: React.FC<HeaderProps> = ({
 
                 <button
                   onClick={onLogout}
-                  className="px-2.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-400 hover:text-white text-xs font-semibold active-press transition-all whitespace-nowrap"
+                  className="px-2 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-400 hover:text-white text-xs font-semibold active-press transition-all whitespace-nowrap"
                 >
                   로그아웃
                 </button>

@@ -44,6 +44,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   const [cmsCategory, setCmsCategory] = useState<'공지사항' | '향후 대회 일정' | '스폰서/파트너십'>('공지사항');
   const [cmsTitle, setCmsTitle] = useState('');
   const [cmsContent, setCmsContent] = useState('');
+  const [cmsLink, setCmsLink] = useState('');
   const [cmsPinned, setCmsPinned] = useState(false);
   const [submittingCms, setSubmittingCms] = useState(false);
 
@@ -198,11 +199,13 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
         category: cmsCategory,
         title: cmsTitle.trim(),
         content: cmsContent.trim(),
+        link: cmsLink.trim() || undefined,
         is_pinned: cmsPinned,
         author: '최고 관리자'
       });
       setCmsTitle('');
       setCmsContent('');
+      setCmsLink('');
       setCmsPinned(false);
       alert(`[${cmsCategory}] 게시글이 성공적으로 등록되었습니다!`);
     } catch (err) {
@@ -315,6 +318,22 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
               />
             </div>
           </div>
+
+          {cmsCategory === '스폰서/파트너십' && (
+            <div>
+              <label className="block text-slate-300 font-semibold mb-1 flex items-center justify-between">
+                <span>🔗 스폰서 홈페이지 링크 (URL)</span>
+                <span className="text-[10px] text-amber-400 font-normal">* 선택 사항 (입력 시 사용자 클릭 시 새 창 열림)</span>
+              </label>
+              <input
+                type="url"
+                placeholder="https://www.edaily.co.kr"
+                value={cmsLink}
+                onChange={(e) => setCmsLink(e.target.value)}
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white placeholder-slate-600 focus:outline-none focus:border-amber-500"
+              />
+            </div>
+          )}
 
           <div>
             <label className="block text-slate-300 font-semibold mb-1">게시물 상세 내용</label>

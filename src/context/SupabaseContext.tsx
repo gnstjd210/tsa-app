@@ -79,6 +79,7 @@ interface SupabaseContextType {
     title: string;
     content: string;
     author?: string;
+    link?: string;
     is_pinned?: boolean;
   }) => Promise<void>;
   editPost: (
@@ -88,6 +89,7 @@ interface SupabaseContextType {
       title?: string;
       content?: string;
       author?: string;
+      link?: string;
       is_pinned?: boolean;
     }
   ) => Promise<void>;
@@ -281,6 +283,7 @@ export const SupabaseProvider: React.FC<{ children: ReactNode }> = ({ children }
     title: string;
     content: string;
     author?: string;
+    link?: string;
     is_pinned?: boolean;
   }) => {
     await createPost(postData);
@@ -294,6 +297,7 @@ export const SupabaseProvider: React.FC<{ children: ReactNode }> = ({ children }
       title?: string;
       content?: string;
       author?: string;
+      link?: string;
       is_pinned?: boolean;
     }
   ) => {

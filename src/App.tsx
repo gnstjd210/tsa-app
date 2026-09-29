@@ -172,8 +172,10 @@ function AppContent() {
         currentUser={currentUser}
         onLogout={handleLogout}
         isAdminRoute={isAdminRoute}
+        isAdminSession={isAdminSession}
         onNavigateMyPage={navigateToMyPage}
         onNavigateHome={() => navigateToHome()}
+        onNavigateAdmin={(e) => navigateToAdmin(e as any)}
       />
 
       {/* 5 Tabs Navigation */}

@@ -633,14 +633,31 @@ export async function createPost(postData: {
   title: string;
   content: string;
   author?: string;
+  link?: string;
   is_pinned?: boolean;
 }) {
-  const { data, error } = await supabase
-    .from('posts')
-    .insert([postData])
-    .select();
-  if (error) throw error;
-  return data[0] as Post;
+  try {
+    const { data, error } = await supabase
+      .from('posts')
+      .insert([postData])
+      .select();
+    if (error) {
+      if (error.message.includes('link')) {
+        const { link, ...fallbackData } = postData;
+        const { data: fbData, error: fbError } = await supabase
+          .from('posts')
+          .insert([fallbackData])
+          .select();
+        if (fbError) throw fbError;
+        return fbData[0] as Post;
+      }
+      throw error;
+    }
+    return data[0] as Post;
+  } catch (err) {
+    console.error('Error creating post:', err);
+    throw err;
+  }
 }
 
 export async function deletePost(id: string) {
@@ -655,14 +672,32 @@ export async function updatePost(
     title?: string;
     content?: string;
     author?: string;
+    link?: string;
     is_pinned?: boolean;
   }
 ) {
-  const { data, error } = await supabase
-    .from('posts')
-    .update(postData)
-    .eq('id', id)
-    .select();
-  if (error) throw error;
-  return data[0] as Post;
+  try {
+    const { data, error } = await supabase
+      .from('posts')
+      .update(postData)
+      .eq('id', id)
+      .select();
+    if (error) {
+      if (error.message.includes('link')) {
+        const { link, ...fallbackData } = postData;
+        const { data: fbData, error: fbError } = await supabase
+          .from('posts')
+          .update(fallbackData)
+          .eq('id', id)
+          .select();
+        if (fbError) throw fbError;
+        return fbData[0] as Post;
+      }
+      throw error;
+    }
+    return data[0] as Post;
+  } catch (err) {
+    console.error('Error updating post:', err);
+    throw err;
+  }
 }

@@ -1,17 +1,18 @@
 import React, { useState } from 'react';
-import { Calendar, ExternalLink, Flame, Sparkles, ChevronRight, Award, Trophy, Users, X, Edit, Trash2, Plus, Megaphone, Loader2, Save } from 'lucide-react';
+import { Calendar, ExternalLink, Flame, Sparkles, ChevronRight, Award, Trophy, Users, X, Edit, Trash2, Plus, Megaphone, Loader2, Save, Link as LinkIcon, ShieldCheck } from 'lucide-react';
 import { useSupabaseData } from '../../context/SupabaseContext';
 import type { Post } from '../../lib/supabase';
 
 interface SponsorItem {
   id: string;
   name: string;
-  tagline: string;
+  tagline?: string;
   description: string;
   logo: string;
   bannerBg: string;
   link?: string;
   badge: string;
+  dbPostId?: string;
 }
 
 interface HomeTabProps {
@@ -21,119 +22,38 @@ interface HomeTabProps {
 
 export const HomeTab: React.FC<HomeTabProps> = ({ onNavigateTab, isAdmin = false }) => {
   const { posts, addPost, editPost, removePost } = useSupabaseData();
+
+  // Regular User Detail Modal State
   const [selectedSponsor, setSelectedSponsor] = useState<SponsorItem | null>(null);
+
+  // Admin Sponsor Inline CRUD Modal State
+  const [adminSponsorModal, setAdminSponsorModal] = useState<SponsorItem | null>(null);
+  const [sponsorEditName, setSponsorEditName] = useState('');
+  const [sponsorEditBadge, setSponsorEditBadge] = useState('OFFICIAL SPONSOR');
+  const [sponsorEditDescription, setSponsorEditDescription] = useState('');
+  const [sponsorEditLink, setSponsorEditLink] = useState('');
+  const [savingSponsorEdit, setSavingSponsorEdit] = useState(false);
 
   // Admin CMS Form State
   const [showCmsForm, setShowCmsForm] = useState(false);
   const [cmsCategory, setCmsCategory] = useState<'공지사항' | '향후 대회 일정' | '스폰서/파트너십'>('공지사항');
   const [cmsTitle, setCmsTitle] = useState('');
   const [cmsContent, setCmsContent] = useState('');
+  const [cmsLink, setCmsLink] = useState('');
   const [cmsPinned, setCmsPinned] = useState(false);
   const [submittingCms, setSubmittingCms] = useState(false);
 
-  // Edit CMS Post Modal State
+  // General CMS Post Edit Modal State
   const [editingPost, setEditingPost] = useState<Post | null>(null);
   const [editCategory, setEditCategory] = useState<'공지사항' | '향후 대회 일정' | '스폰서/파트너십'>('공지사항');
   const [editTitle, setEditTitle] = useState('');
   const [editContent, setEditContent] = useState('');
+  const [editLink, setEditLink] = useState('');
   const [editPinned, setEditPinned] = useState(false);
   const [submittingEdit, setSubmittingEdit] = useState(false);
 
-  const handleCreatePost = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!cmsTitle.trim() || !cmsContent.trim()) return;
-    try {
-      setSubmittingCms(true);
-      await addPost({
-        category: cmsCategory,
-        title: cmsTitle,
-        content: cmsContent,
-        is_pinned: cmsPinned
-      });
-      setCmsTitle('');
-      setCmsContent('');
-      setCmsPinned(false);
-      setShowCmsForm(false);
-      alert('CMS 게시글이 등록되었습니다!');
-    } catch (err) {
-      console.error('Error adding CMS post:', err);
-      alert('게시글 등록에 실패했습니다.');
-    } finally {
-      setSubmittingCms(false);
-    }
-  };
-
-  const handleOpenEditPost = (post: Post) => {
-    setEditingPost(post);
-    setEditCategory((post.category as any) || '공지사항');
-    setEditTitle(post.title);
-    setEditContent(post.content);
-    setEditPinned(!!post.is_pinned);
-  };
-
-  const handleSaveEditPost = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editingPost || !editTitle.trim() || !editContent.trim()) return;
-    try {
-      setSubmittingEdit(true);
-      await editPost(editingPost.id, {
-        category: editCategory,
-        title: editTitle,
-        content: editContent,
-        is_pinned: editPinned
-      });
-      setEditingPost(null);
-      alert('게시글이 성공적으로 수정되었습니다.');
-    } catch (err) {
-      console.error('Error editing post:', err);
-      alert('게시글 수정에 실패했습니다.');
-    } finally {
-      setSubmittingEdit(false);
-    }
-  };
-
-  const handleDeletePost = async (id: string) => {
-    if (!window.confirm('정말 삭제하시겠습니까?')) return;
-    try {
-      await removePost(id);
-    } catch (err) {
-      console.error('Error deleting post:', err);
-    }
-  };
-
-  // Default Mock Schedule
-  const upcomingSchedule = [
-    {
-      id: '1',
-      title: '1회 women Tournament (이데일리 컵)',
-      date: '2026. 10. 01 ~ 10. 15',
-      location: '해누리체육공원 풋살장',
-      status: '진행 중',
-      participants: '총 48개 팀 (1조 ~ 6조)',
-      highlight: true
-    },
-    {
-      id: '2',
-      title: 'TSA 윈터 마스터즈 챔피언십',
-      date: '2026. 12. 05 ~ 12. 20',
-      location: 'TSA 메인 실내 에어돔구장',
-      status: '접수 예정',
-      participants: '선착순 32개 팀 모집 예정',
-      highlight: false
-    },
-    {
-      id: '3',
-      title: '2027 TSA 전국 아마추어 유소년/여성 리그',
-      date: '2027. 03. 10 ~ 04. 30',
-      location: '서울/경기 주요 체육공원',
-      status: '기획 중',
-      participants: '전국 단위 클럽 대항전',
-      highlight: false
-    }
-  ];
-
-  // Default Sponsor List
-  const sponsors: SponsorItem[] = [
+  // Default Sponsor Items
+  const defaultSponsors: SponsorItem[] = [
     {
       id: 'edaily',
       name: '이데일리 (eDaily)',
@@ -162,6 +82,195 @@ export const HomeTab: React.FC<HomeTabProps> = ({ onNavigateTab, isAdmin = false
       logo: '🏟️',
       bannerBg: 'from-emerald-600/30 to-slate-900/40',
       badge: 'VENUE PARTNER'
+    }
+  ];
+
+  // Merge DB Sponsor Posts into Sponsor Items
+  const dbSponsorPosts = (posts || []).filter(p => p.category === '스폰서/파트너십');
+  const mergedSponsors: SponsorItem[] = [
+    ...defaultSponsors,
+    ...dbSponsorPosts.map(p => ({
+      id: p.id,
+      dbPostId: p.id,
+      name: p.title,
+      tagline: '공식 후원 및 파트너사',
+      description: p.content,
+      logo: '🤝',
+      bannerBg: 'from-orange-600/30 to-slate-900/40',
+      badge: 'SPONSOR PARTNER',
+      link: p.link
+    }))
+  ];
+
+  // Click Handler for Sponsor Box based on role (Requirement 2)
+  const handleSponsorClick = (sponsor: SponsorItem) => {
+    if (isAdmin) {
+      // Admin Role: Open Admin Inline CRUD Modal
+      setAdminSponsorModal(sponsor);
+      setSponsorEditName(sponsor.name);
+      setSponsorEditBadge(sponsor.badge || 'OFFICIAL SPONSOR');
+      setSponsorEditDescription(sponsor.description);
+      setSponsorEditLink(sponsor.link || '');
+    } else {
+      // Regular User Role: If URL exists, open homepage in new tab
+      if (sponsor.link && sponsor.link.trim() !== '') {
+        window.open(sponsor.link, '_blank', 'noopener,noreferrer');
+      } else {
+        // Fallback: Open detail popup if no link
+        setSelectedSponsor(sponsor);
+      }
+    }
+  };
+
+  // Save Admin Sponsor Edit
+  const handleSaveAdminSponsor = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!adminSponsorModal || !sponsorEditName.trim() || !sponsorEditDescription.trim()) return;
+
+    try {
+      setSavingSponsorEdit(true);
+      if (adminSponsorModal.dbPostId) {
+        // Update existing DB Post
+        await editPost(adminSponsorModal.dbPostId, {
+          category: '스폰서/파트너십',
+          title: sponsorEditName.trim(),
+          content: sponsorEditDescription.trim(),
+          link: sponsorEditLink.trim() || undefined
+        });
+      } else {
+        // Add new DB Post for default sponsor
+        await addPost({
+          category: '스폰서/파트너십',
+          title: sponsorEditName.trim(),
+          content: sponsorEditDescription.trim(),
+          link: sponsorEditLink.trim() || undefined
+        });
+      }
+      setAdminSponsorModal(null);
+      alert(`[${sponsorEditName.trim()}] 스폰서 정보가 저장되었습니다!`);
+    } catch (err) {
+      console.error('Error saving sponsor edit:', err);
+      alert('스폰서 정보 저장에 실패했습니다.');
+    } finally {
+      setSavingSponsorEdit(false);
+    }
+  };
+
+  // Delete Admin Sponsor with Browser confirm()
+  const handleDeleteAdminSponsor = async () => {
+    if (!adminSponsorModal) return;
+    if (!window.confirm('정말 삭제하시겠습니까?')) return;
+
+    try {
+      setSavingSponsorEdit(true);
+      if (adminSponsorModal.dbPostId) {
+        await removePost(adminSponsorModal.dbPostId);
+      }
+      setAdminSponsorModal(null);
+      alert('스폰서 정보가 완전 삭제되었습니다.');
+    } catch (err) {
+      console.error('Error deleting sponsor:', err);
+      alert('스폰서 삭제에 실패했습니다.');
+    } finally {
+      setSavingSponsorEdit(false);
+    }
+  };
+
+  // Create CMS Post
+  const handleCreatePost = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!cmsTitle.trim() || !cmsContent.trim()) return;
+    try {
+      setSubmittingCms(true);
+      await addPost({
+        category: cmsCategory,
+        title: cmsTitle.trim(),
+        content: cmsContent.trim(),
+        link: cmsLink.trim() || undefined,
+        is_pinned: cmsPinned
+      });
+      setCmsTitle('');
+      setCmsContent('');
+      setCmsLink('');
+      setCmsPinned(false);
+      setShowCmsForm(false);
+      alert('CMS 게시글이 등록되었습니다!');
+    } catch (err) {
+      console.error('Error adding CMS post:', err);
+      alert('게시글 등록에 실패했습니다.');
+    } finally {
+      setSubmittingCms(false);
+    }
+  };
+
+  const handleOpenEditPost = (post: Post) => {
+    setEditingPost(post);
+    setEditCategory((post.category as any) || '공지사항');
+    setEditTitle(post.title);
+    setEditContent(post.content);
+    setEditLink(post.link || '');
+    setEditPinned(!!post.is_pinned);
+  };
+
+  const handleSaveEditPost = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingPost || !editTitle.trim() || !editContent.trim()) return;
+    try {
+      setSubmittingEdit(true);
+      await editPost(editingPost.id, {
+        category: editCategory,
+        title: editTitle.trim(),
+        content: editContent.trim(),
+        link: editLink.trim() || undefined,
+        is_pinned: editPinned
+      });
+      setEditingPost(null);
+      alert('게시글이 성공적으로 수정되었습니다.');
+    } catch (err) {
+      console.error('Error editing post:', err);
+      alert('게시글 수정에 실패했습니다.');
+    } finally {
+      setSubmittingEdit(false);
+    }
+  };
+
+  const handleDeletePost = async (id: string) => {
+    if (!window.confirm('정말 삭제하시겠습니까?')) return;
+    try {
+      await removePost(id);
+    } catch (err) {
+      console.error('Error deleting post:', err);
+    }
+  };
+
+  // Upcoming Schedule Data
+  const upcomingSchedule = [
+    {
+      id: '1',
+      title: '1회 women Tournament (이데일리 컵)',
+      date: '2026. 10. 01 ~ 10. 15',
+      location: '해누리체육공원 풋살장',
+      status: '진행 중',
+      participants: '총 48개 팀 (1조 ~ 6조)',
+      highlight: true
+    },
+    {
+      id: '2',
+      title: 'TSA 윈터 마스터즈 챔피언십',
+      date: '2026. 12. 05 ~ 12. 20',
+      location: 'TSA 메인 실내 에어돔구장',
+      status: '접수 예정',
+      participants: '선착순 32개 팀 모집 예정',
+      highlight: false
+    },
+    {
+      id: '3',
+      title: '2027 TSA 전국 아마추어 유소년/여성 리그',
+      date: '2027. 03. 10 ~ 04. 30',
+      location: '서울/경기 주요 체육공원',
+      status: '기획 중',
+      participants: '전국 단위 클럽 대항전',
+      highlight: false
     }
   ];
 
@@ -238,11 +347,11 @@ export const HomeTab: React.FC<HomeTabProps> = ({ onNavigateTab, isAdmin = false
                   <select
                     value={cmsCategory}
                     onChange={(e) => setCmsCategory(e.target.value as any)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-orange-500"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-orange-500 font-bold"
                   >
-                    <option value="공지사항">공지사항</option>
-                    <option value="향후 대회 일정">향후 대회 일정</option>
-                    <option value="스폰서/파트너십">스폰서/파트너십</option>
+                    <option value="공지사항">📢 공지사항</option>
+                    <option value="향후 대회 일정">🏆 향후 대회 일정</option>
+                    <option value="스폰서/파트너십">🤝 스폰서/파트너십</option>
                   </select>
                 </div>
                 <div>
@@ -257,6 +366,25 @@ export const HomeTab: React.FC<HomeTabProps> = ({ onNavigateTab, isAdmin = false
                   />
                 </div>
               </div>
+
+              {/* Requirement 2: Conditional URL Field for Sponsor Category */}
+              {cmsCategory === '스폰서/파트너십' && (
+                <div>
+                  <label className="block text-slate-300 font-semibold mb-1 flex items-center justify-between">
+                    <span className="flex items-center gap-1 text-amber-400">
+                      <LinkIcon className="w-3.5 h-3.5" /> 스폰서 홈페이지 링크 (URL)
+                    </span>
+                    <span className="text-[10px] text-slate-400 font-normal">* 클릭 시 이동할 URL</span>
+                  </label>
+                  <input
+                    type="url"
+                    placeholder="https://www.edaily.co.kr"
+                    value={cmsLink}
+                    onChange={(e) => setCmsLink(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white placeholder-slate-600 focus:outline-none focus:border-amber-500"
+                  />
+                </div>
+              )}
 
               <div>
                 <label className="block text-slate-300 font-semibold mb-1">상세 내용</label>
@@ -292,63 +420,6 @@ export const HomeTab: React.FC<HomeTabProps> = ({ onNavigateTab, isAdmin = false
               </div>
             </form>
           )}
-        </div>
-      )}
-
-      {/* Dynamic CMS Posts Section (If posts exist in DB) */}
-      {posts && posts.length > 0 && (
-        <div className="space-y-3">
-          <div className="flex items-center space-x-2">
-            <div className="w-2 h-5 bg-orange-500 rounded-full" />
-            <h3 className="text-base font-bold text-white tracking-tight flex items-center gap-2">
-              <span>최신 게시글 & 소식</span>
-              <span className="px-2 py-0.5 rounded-full bg-orange-500/20 text-[10px] font-semibold text-orange-400">
-                CMS UPDATES
-              </span>
-            </h3>
-          </div>
-
-          <div className="space-y-2.5">
-            {posts.map((post) => (
-              <div
-                key={post.id}
-                className="glass-panel rounded-2xl p-4 border border-slate-800 hover:border-slate-700 transition-all space-y-2 relative"
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <div className="flex items-center space-x-2 mb-1">
-                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-orange-500 text-white">
-                        {post.category || '공지'}
-                      </span>
-                      <span className="text-xs font-bold text-white">{post.title}</span>
-                    </div>
-                    <p className="text-xs text-slate-300 leading-relaxed whitespace-pre-line">
-                      {post.content}
-                    </p>
-                  </div>
-
-                  {isAdmin && (
-                    <div className="flex items-center space-x-1">
-                      <button
-                        onClick={() => handleOpenEditPost(post)}
-                        className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-amber-400 transition-colors"
-                        title="수정"
-                      >
-                        <Edit className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => handleDeletePost(post.id)}
-                        className="p-1.5 rounded-lg hover:bg-red-500/20 text-red-400 transition-colors"
-                        title="삭제"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
         </div>
       )}
 
@@ -412,52 +483,237 @@ export const HomeTab: React.FC<HomeTabProps> = ({ onNavigateTab, isAdmin = false
         </div>
       </div>
 
-      {/* SECTION 2: 스폰서 홍보용 게시글/배너 리스트 */}
+      {/* Requirement 2: SECTION 2: 스폰서 홍보용 게시글/배너 리스트 (Role-based actions & Inline CRUD) */}
       <div className="space-y-3">
-        <div className="flex items-center space-x-2">
-          <div className="w-2 h-5 bg-amber-500 rounded-full" />
-          <h3 className="text-base font-bold text-white tracking-tight flex items-center gap-2">
-            <span>스폰서 홍보 & 파트너십</span>
-            <span className="px-2 py-0.5 rounded-full bg-amber-500/10 text-[10px] font-semibold text-amber-400 border border-amber-500/20">
-              SPONSORS
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <div className="w-2 h-5 bg-amber-500 rounded-full" />
+            <h3 className="text-base font-bold text-white tracking-tight flex items-center gap-2">
+              <span>스폰서 홍보 & 파트너십</span>
+              <span className="px-2 py-0.5 rounded-full bg-amber-500/10 text-[10px] font-semibold text-amber-400 border border-amber-500/20">
+                SPONSORS
+              </span>
+            </h3>
+          </div>
+          {isAdmin && (
+            <span className="text-[10px] font-bold text-amber-400 bg-amber-500/20 border border-amber-500/30 px-2 py-0.5 rounded-full">
+              관리자 모드: 박스 클릭 시 수정/삭제
             </span>
-          </h3>
+          )}
         </div>
 
         <div className="grid grid-cols-1 gap-3">
-          {sponsors.map((sponsor) => (
+          {mergedSponsors.map((sponsor) => (
             <div
               key={sponsor.id}
-              onClick={() => setSelectedSponsor(sponsor)}
-              className={`glass-panel rounded-2xl p-4 border border-slate-800 hover:border-amber-500/50 bg-gradient-to-r ${sponsor.bannerBg} transition-all cursor-pointer group shadow-lg`}
+              onClick={() => handleSponsorClick(sponsor)}
+              className={`glass-panel rounded-2xl p-4 border border-slate-800 hover:border-amber-500/50 bg-gradient-to-r ${sponsor.bannerBg} transition-all cursor-pointer group shadow-lg relative`}
             >
               <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-3.5">
-                  <div className="w-11 h-11 rounded-2xl bg-slate-900 border border-slate-700 flex items-center justify-center text-2xl shadow-inner group-hover:scale-105 transition-transform">
+                <div className="flex items-center space-x-3.5 min-w-0">
+                  <div className="w-11 h-11 rounded-2xl bg-slate-900 border border-slate-700 flex items-center justify-center text-2xl shadow-inner group-hover:scale-105 transition-transform flex-shrink-0">
                     {sponsor.logo}
                   </div>
-                  <div>
-                    <span className="text-[10px] font-bold text-amber-400 tracking-widest uppercase block mb-0.5">
-                      {sponsor.badge}
-                    </span>
-                    <h4 className="text-base font-bold text-white group-hover:text-amber-300 transition-colors">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center space-x-2">
+                      <span className="text-[10px] font-bold text-amber-400 tracking-widest uppercase block">
+                        {sponsor.badge}
+                      </span>
+                      {sponsor.link && (
+                        <span className="text-[9px] text-slate-400 flex items-center gap-0.5 bg-slate-900/80 px-1.5 py-0.5 rounded border border-slate-700">
+                          <LinkIcon className="w-2.5 h-2.5 text-amber-400" />
+                          <span>링크보유</span>
+                        </span>
+                      )}
+                    </div>
+                    <h4 className="text-base font-bold text-white group-hover:text-amber-300 transition-colors truncate">
                       {sponsor.name}
                     </h4>
-                    <p className="text-xs text-slate-300">{sponsor.tagline}</p>
+                    <p className="text-xs text-slate-300 truncate">{sponsor.tagline || sponsor.description}</p>
                   </div>
                 </div>
 
-                <ChevronRight className="w-5 h-5 text-slate-500 group-hover:text-white transition-colors" />
+                <div className="flex items-center space-x-2 flex-shrink-0">
+                  {isAdmin ? (
+                    <span className="px-2.5 py-1 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold flex items-center gap-1 shadow-md">
+                      <Edit className="w-3.5 h-3.5" />
+                      <span>수정/삭제</span>
+                    </span>
+                  ) : sponsor.link ? (
+                    <span className="p-2 rounded-xl bg-slate-900/80 group-hover:bg-amber-500 group-hover:text-slate-950 text-slate-400 transition-all">
+                      <ExternalLink className="w-4 h-4" />
+                    </span>
+                  ) : (
+                    <ChevronRight className="w-5 h-5 text-slate-500 group-hover:text-white transition-colors" />
+                  )}
+                </div>
               </div>
             </div>
           ))}
         </div>
       </div>
 
-      {/* Edit CMS Post Modal */}
+      {/* Dynamic CMS Posts Section (for General / Announcement / Schedule posts) */}
+      {posts && posts.filter(p => p.category !== '스폰서/파트너십').length > 0 && (
+        <div className="space-y-3">
+          <div className="flex items-center space-x-2">
+            <div className="w-2 h-5 bg-orange-500 rounded-full" />
+            <h3 className="text-base font-bold text-white tracking-tight flex items-center gap-2">
+              <span>최신 공지 및 기타 소식</span>
+              <span className="px-2 py-0.5 rounded-full bg-orange-500/20 text-[10px] font-semibold text-orange-400">
+                CMS UPDATES
+              </span>
+            </h3>
+          </div>
+
+          <div className="space-y-2.5">
+            {posts.filter(p => p.category !== '스폰서/파트너십').map((post) => (
+              <div
+                key={post.id}
+                className="glass-panel rounded-2xl p-4 border border-slate-800 hover:border-slate-700 transition-all space-y-2 relative"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <div className="flex items-center space-x-2 mb-1">
+                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-orange-500 text-white">
+                        {post.category || '공지'}
+                      </span>
+                      <span className="text-xs font-bold text-white">{post.title}</span>
+                    </div>
+                    <p className="text-xs text-slate-300 leading-relaxed whitespace-pre-line">
+                      {post.content}
+                    </p>
+                  </div>
+
+                  {isAdmin && (
+                    <div className="flex items-center space-x-1">
+                      <button
+                        onClick={() => handleOpenEditPost(post)}
+                        className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-amber-400 transition-colors"
+                        title="수정"
+                      >
+                        <Edit className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDeletePost(post.id)}
+                        className="p-1.5 rounded-lg hover:bg-red-500/20 text-red-400 transition-colors"
+                        title="삭제"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Requirement 2: Admin Sponsor Inline CRUD Modal Popup */}
+      {adminSponsorModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
+          <div className="glass-panel w-full max-w-md rounded-2xl p-5 border border-amber-500/40 shadow-2xl space-y-4 bg-slate-900">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div className="flex items-center space-x-2 text-amber-400">
+                <ShieldCheck className="w-5 h-5" />
+                <h3 className="text-base font-bold text-white">[어드민] 스폰서 수정 / 삭제</h3>
+              </div>
+              <button
+                onClick={() => setAdminSponsorModal(null)}
+                className="text-slate-400 hover:text-white p-1 rounded-lg"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveAdminSponsor} className="space-y-3 text-xs">
+              <div>
+                <label className="block text-slate-300 font-semibold mb-1">스폰서 명칭 / 제목</label>
+                <input
+                  type="text"
+                  required
+                  value={sponsorEditName}
+                  onChange={(e) => setSponsorEditName(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-white focus:outline-none focus:border-amber-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-300 font-semibold mb-1">뱃지 (예: MAIN SPONSOR, OFFICIAL PARTNER)</label>
+                <input
+                  type="text"
+                  value={sponsorEditBadge}
+                  onChange={(e) => setSponsorEditBadge(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-white focus:outline-none focus:border-amber-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-300 font-semibold mb-1 flex items-center justify-between">
+                  <span className="flex items-center gap-1 text-amber-400 font-bold">
+                    <LinkIcon className="w-3.5 h-3.5" /> 홈페이지 링크 (URL)
+                  </span>
+                  <span className="text-[10px] text-slate-400">* 유저 클릭 시 새 창 이동</span>
+                </label>
+                <input
+                  type="url"
+                  placeholder="예: https://www.edaily.co.kr"
+                  value={sponsorEditLink}
+                  onChange={(e) => setSponsorEditLink(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-white focus:outline-none focus:border-amber-500 font-mono"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-300 font-semibold mb-1">상세 소개 / 설명 내용</label>
+                <textarea
+                  required
+                  rows={3}
+                  value={sponsorEditDescription}
+                  onChange={(e) => setSponsorEditDescription(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-white focus:outline-none focus:border-amber-500"
+                />
+              </div>
+
+              <div className="flex items-center justify-between pt-3 gap-2 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={handleDeleteAdminSponsor}
+                  disabled={savingSponsorEdit}
+                  className="px-3 py-2.5 rounded-xl bg-red-600/20 hover:bg-red-600/30 text-red-400 border border-red-500/30 font-bold flex items-center space-x-1 transition-all"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  <span>스폰서 삭제</span>
+                </button>
+
+                <div className="flex space-x-2">
+                  <button
+                    type="button"
+                    onClick={() => setAdminSponsorModal(null)}
+                    className="px-3 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold"
+                  >
+                    취소
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={savingSponsorEdit}
+                    className="px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold flex items-center space-x-1 shadow-md"
+                  >
+                    {savingSponsorEdit ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                    <span>수정 완료</span>
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* General CMS Post Edit Modal */}
       {editingPost && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
-          <div className="glass-panel w-full max-w-md rounded-2xl p-5 border border-slate-800 shadow-2xl space-y-4">
+          <div className="glass-panel w-full max-w-md rounded-2xl p-5 border border-slate-800 shadow-2xl space-y-4 bg-slate-900">
             <div className="flex items-center justify-between border-b border-slate-800 pb-3">
               <h3 className="text-base font-bold text-white flex items-center gap-2">
                 <Edit className="w-4 h-4 text-orange-500" />
@@ -477,7 +733,7 @@ export const HomeTab: React.FC<HomeTabProps> = ({ onNavigateTab, isAdmin = false
                 <select
                   value={editCategory}
                   onChange={(e) => setEditCategory(e.target.value as any)}
-                  className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2.5 text-white focus:outline-none focus:border-orange-500"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-white focus:outline-none focus:border-orange-500"
                 >
                   <option value="공지사항">공지사항</option>
                   <option value="향후 대회 일정">향후 대회 일정</option>
@@ -492,9 +748,27 @@ export const HomeTab: React.FC<HomeTabProps> = ({ onNavigateTab, isAdmin = false
                   required
                   value={editTitle}
                   onChange={(e) => setEditTitle(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2.5 text-white focus:outline-none focus:border-orange-500"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-white focus:outline-none focus:border-orange-500"
                 />
               </div>
+
+              {editCategory === '스폰서/파트너십' && (
+                <div>
+                  <label className="block text-slate-300 font-semibold mb-1 flex items-center justify-between">
+                    <span className="flex items-center gap-1 text-amber-400 font-bold">
+                      <LinkIcon className="w-3.5 h-3.5" /> 홈페이지 링크 (URL)
+                    </span>
+                    <span className="text-[10px] text-slate-400">* 선택 사항</span>
+                  </label>
+                  <input
+                    type="url"
+                    placeholder="https://www.edaily.co.kr"
+                    value={editLink}
+                    onChange={(e) => setEditLink(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-white focus:outline-none focus:border-amber-500"
+                  />
+                </div>
+              )}
 
               <div>
                 <label className="block text-slate-300 font-semibold mb-1">상세 내용</label>
@@ -503,7 +777,7 @@ export const HomeTab: React.FC<HomeTabProps> = ({ onNavigateTab, isAdmin = false
                   rows={4}
                   value={editContent}
                   onChange={(e) => setEditContent(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2.5 text-white focus:outline-none focus:border-orange-500"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-white focus:outline-none focus:border-orange-500"
                 />
               </div>
 
@@ -541,10 +815,10 @@ export const HomeTab: React.FC<HomeTabProps> = ({ onNavigateTab, isAdmin = false
         </div>
       )}
 
-      {/* Sponsor Detail Modal */}
+      {/* Regular User Sponsor Detail Modal */}
       {selectedSponsor && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
-          <div className="glass-panel w-full max-w-sm rounded-2xl p-5 border border-slate-800 shadow-2xl space-y-4">
+          <div className="glass-panel w-full max-w-sm rounded-2xl p-5 border border-slate-800 shadow-2xl space-y-4 bg-slate-900">
             <div className="flex items-center justify-between border-b border-slate-800 pb-3">
               <div className="flex items-center space-x-2.5">
                 <span className="text-2xl">{selectedSponsor.logo}</span>
