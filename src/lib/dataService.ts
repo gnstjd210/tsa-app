@@ -310,6 +310,16 @@ export async function deleteAnnouncement(id: string) {
   if (error) throw error;
 }
 
+export async function updateAnnouncement(id: string, title: string, content: string, is_pinned: boolean = false) {
+  const { data, error } = await supabase
+    .from('announcements')
+    .update({ title, content, is_pinned })
+    .eq('id', id)
+    .select();
+  if (error) throw error;
+  return data[0] as Announcement;
+}
+
 // Format Group Name to 1조, 2조, etc.
 export function formatGroupName(name?: string): string {
   if (!name) return '1조';
@@ -636,4 +646,23 @@ export async function createPost(postData: {
 export async function deletePost(id: string) {
   const { error } = await supabase.from('posts').delete().eq('id', id);
   if (error) throw error;
+}
+
+export async function updatePost(
+  id: string,
+  postData: {
+    category?: '공지사항' | '향후 대회 일정' | '스폰서/파트너십';
+    title?: string;
+    content?: string;
+    author?: string;
+    is_pinned?: boolean;
+  }
+) {
+  const { data, error } = await supabase
+    .from('posts')
+    .update(postData)
+    .eq('id', id)
+    .select();
+  if (error) throw error;
+  return data[0] as Post;
 }

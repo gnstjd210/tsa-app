@@ -9,6 +9,7 @@ interface HeaderProps {
   onLogout?: () => void;
   isAdminRoute?: boolean;
   onNavigateMyPage?: () => void;
+  onNavigateHome?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -17,16 +18,21 @@ export const Header: React.FC<HeaderProps> = ({
   currentUser,
   onLogout,
   isAdminRoute = false,
-  onNavigateMyPage
+  onNavigateMyPage,
+  onNavigateHome
 }) => {
   const { sponsorTitle } = useSupabaseData();
 
   return (
     <header className="sticky top-0 z-40 bg-slate-950/95 backdrop-blur-md border-b border-slate-800/80 px-4 py-3">
       <div className="max-w-md mx-auto flex items-center justify-between gap-2">
-        {/* Logo & Brand Area */}
-        <div className="flex items-center space-x-2.5 min-w-0">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-orange-600 via-amber-500 to-yellow-400 p-[2px] shadow-lg shadow-orange-500/20 flex-shrink-0">
+        {/* Requirement 4: Clickable Logo & Brand Area -> Main Home (/) Routing */}
+        <div
+          onClick={onNavigateHome}
+          className="flex items-center space-x-2.5 min-w-0 cursor-pointer group hover:opacity-90 transition-opacity"
+          title="TSA 메인 홈으로 이동 (/)"
+        >
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-orange-600 via-amber-500 to-yellow-400 p-[2px] shadow-lg shadow-orange-500/20 flex-shrink-0 group-hover:scale-105 transition-transform">
             <div className="w-full h-full bg-slate-950 rounded-[10px] flex items-center justify-center">
               <Trophy className="w-5 h-5 text-orange-500" />
             </div>
@@ -35,7 +41,7 @@ export const Header: React.FC<HeaderProps> = ({
           <div className="flex flex-col min-w-0">
             {/* Line 1: TSA Text + OFFICIAL Badge */}
             <div className="flex items-center space-x-1.5">
-              <span className="font-sports text-2xl font-black tracking-wider text-white leading-none whitespace-nowrap">
+              <span className="font-sports text-2xl font-black tracking-wider text-white leading-none whitespace-nowrap group-hover:text-orange-400 transition-colors">
                 TSA
               </span>
               <span className="text-[9px] uppercase font-extrabold tracking-widest px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-400 border border-orange-500/30 whitespace-nowrap shadow-sm">

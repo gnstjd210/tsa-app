@@ -11,6 +11,7 @@ import {
   getTournaments,
   updateTournamentTitle,
   createAnnouncement,
+  updateAnnouncement,
   createTeam,
   createMatch,
   updateMatchScore,
@@ -22,6 +23,7 @@ import {
   assignTeamToGroup,
   getPosts,
   createPost,
+  updatePost,
   deletePost,
   seedInitialDataIfNeeded
 } from '../lib/dataService';
@@ -38,6 +40,7 @@ interface SupabaseContextType {
   refreshAllData: () => Promise<void>;
   updateSponsorTitle: (newTitle: string) => Promise<void>;
   addAnnouncement: (title: string, content: string, isPinned?: boolean) => Promise<void>;
+  editAnnouncement: (id: string, title: string, content: string, isPinned?: boolean) => Promise<void>;
   removeAnnouncement: (id: string) => Promise<void>;
   addTeam: (name: string, logoFileOrBase64?: File | string, groupId?: string) => Promise<Team>;
   removeTeam: (id: string) => Promise<void>;
@@ -78,6 +81,16 @@ interface SupabaseContextType {
     author?: string;
     is_pinned?: boolean;
   }) => Promise<void>;
+  editPost: (
+    id: string,
+    postData: {
+      category?: '공지사항' | '향후 대회 일정' | '스폰서/파트너십';
+      title?: string;
+      content?: string;
+      author?: string;
+      is_pinned?: boolean;
+    }
+  ) => Promise<void>;
   removePost: (id: string) => Promise<void>;
   fetchGroupStandings: (groupId: string) => Promise<GroupTeam[]>;
 }
@@ -186,6 +199,11 @@ export const SupabaseProvider: React.FC<{ children: ReactNode }> = ({ children }
     await refreshAllData();
   };
 
+  const editAnnouncement = async (id: string, title: string, content: string, isPinned: boolean = false) => {
+    await updateAnnouncement(id, title, content, isPinned);
+    await refreshAllData();
+  };
+
   const removeAnnouncement = async (id: string) => {
     await deleteAnnouncement(id);
     await refreshAllData();
@@ -269,6 +287,20 @@ export const SupabaseProvider: React.FC<{ children: ReactNode }> = ({ children }
     await refreshAllData();
   };
 
+  const editPost = async (
+    id: string,
+    postData: {
+      category?: '공지사항' | '향후 대회 일정' | '스폰서/파트너십';
+      title?: string;
+      content?: string;
+      author?: string;
+      is_pinned?: boolean;
+    }
+  ) => {
+    await updatePost(id, postData);
+    await refreshAllData();
+  };
+
   const removePost = async (id: string) => {
     await deletePost(id);
     await refreshAllData();
@@ -293,6 +325,7 @@ export const SupabaseProvider: React.FC<{ children: ReactNode }> = ({ children }
         refreshAllData,
         updateSponsorTitle,
         addAnnouncement,
+        editAnnouncement,
         removeAnnouncement,
         addTeam,
         removeTeam,
@@ -303,6 +336,7 @@ export const SupabaseProvider: React.FC<{ children: ReactNode }> = ({ children }
         editMatchScore,
         manualEditStandings,
         addPost,
+        editPost,
         removePost,
         fetchGroupStandings
       }}

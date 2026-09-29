@@ -124,11 +124,17 @@ function AppContent() {
     }
   };
 
-  const navigateToHome = (e: React.MouseEvent) => {
-    e.preventDefault();
+  const isAdminSession =
+    isAdminRoute ||
+    sessionStorage.getItem('tsa_admin_auth') === 'true' ||
+    localStorage.getItem('tsa_admin_auth') === 'true';
+
+  const navigateToHome = (e?: React.MouseEvent) => {
+    if (e) e.preventDefault();
     window.history.pushState({}, '', '/');
     setIsAdminRoute(false);
     setIsMyPageRoute(false);
+    setActiveTab('home');
   };
 
   const handleTabChange = (tab: TabType) => {
@@ -143,17 +149,17 @@ function AppContent() {
   const renderActiveTab = () => {
     switch (activeTab) {
       case 'home':
-        return <HomeTab onNavigateTab={(tab) => handleTabChange(tab)} />;
+        return <HomeTab onNavigateTab={(tab) => handleTabChange(tab)} isAdmin={isAdminSession} />;
       case 'announcements':
-        return <AnnouncementsTab isAdmin={isAdminRoute} />;
+        return <AnnouncementsTab isAdmin={isAdminSession} />;
       case 'standings':
         return <GroupStandingsTab />;
       case 'schedule':
-        return <MatchScheduleTab isAdmin={isAdminRoute} />;
+        return <MatchScheduleTab isAdmin={isAdminSession} />;
       case 'teams':
-        return <TeamInfoTab />;
+        return <TeamInfoTab isAdmin={isAdminSession} />;
       default:
-        return <HomeTab onNavigateTab={(tab) => handleTabChange(tab)} />;
+        return <HomeTab onNavigateTab={(tab) => handleTabChange(tab)} isAdmin={isAdminSession} />;
     }
   };
 
@@ -167,6 +173,7 @@ function AppContent() {
         onLogout={handleLogout}
         isAdminRoute={isAdminRoute}
         onNavigateMyPage={navigateToMyPage}
+        onNavigateHome={() => navigateToHome()}
       />
 
       {/* 5 Tabs Navigation */}

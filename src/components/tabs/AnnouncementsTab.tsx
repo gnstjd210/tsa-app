@@ -1,15 +1,17 @@
 import React, { useState } from 'react';
-import { Megaphone, Pin, Plus, Search, Trash2, Sparkles, Loader2, Calendar } from 'lucide-react';
+import { Megaphone, Pin, Plus, Search, Trash2, Edit, Sparkles, Loader2, Calendar } from 'lucide-react';
 import { useSupabaseData } from '../../context/SupabaseContext';
+import type { Announcement } from '../../lib/supabase';
 
 interface AnnouncementsTabProps {
   isAdmin?: boolean;
 }
 
 export const AnnouncementsTab: React.FC<AnnouncementsTabProps> = ({ isAdmin = false }) => {
-  const { announcements, loading, addAnnouncement, removeAnnouncement } = useSupabaseData();
+  const { announcements, loading, addAnnouncement, editAnnouncement, removeAnnouncement } = useSupabaseData();
   const [search, setSearch] = useState('');
   const [showModal, setShowModal] = useState(false);
+  const [editingItem, setEditingItem] = useState<Announcement | null>(null);
 
   // Form State
   const [title, setTitle] = useState('');
@@ -17,26 +19,47 @@ export const AnnouncementsTab: React.FC<AnnouncementsTabProps> = ({ isAdmin = fa
   const [isPinned, setIsPinned] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  const handleCreate = async (e: React.FormEvent) => {
+  const openCreateModal = () => {
+    setEditingItem(null);
+    setTitle('');
+    setContent('');
+    setIsPinned(false);
+    setShowModal(true);
+  };
+
+  const openEditModal = (item: Announcement) => {
+    setEditingItem(item);
+    setTitle(item.title);
+    setContent(item.content);
+    setIsPinned(!!item.is_pinned);
+    setShowModal(true);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim() || !content.trim()) return;
     try {
       setSubmitting(true);
-      await addAnnouncement(title, content, isPinned);
+      if (editingItem) {
+        await editAnnouncement(editingItem.id, title, content, isPinned);
+      } else {
+        await addAnnouncement(title, content, isPinned);
+      }
       setTitle('');
       setContent('');
       setIsPinned(false);
+      setEditingItem(null);
       setShowModal(false);
     } catch (err) {
-      console.error('Error creating announcement:', err);
-      alert('공지사항 작성에 실패했습니다.');
+      console.error('Error saving announcement:', err);
+      alert('공지사항 저장에 실패했습니다.');
     } finally {
       setSubmitting(false);
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm('이 공지사항을 삭제하시겠습니까?')) return;
+    if (!window.confirm('정말 삭제하시겠습니까?')) return;
     try {
       await removeAnnouncement(id);
     } catch (err) {
@@ -65,7 +88,7 @@ export const AnnouncementsTab: React.FC<AnnouncementsTabProps> = ({ isAdmin = fa
 
           {isAdmin && (
             <button
-              onClick={() => setShowModal(true)}
+              onClick={openCreateModal}
               className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white text-xs font-bold shadow-lg shadow-orange-500/20 active-press transition-all flex items-center justify-center space-x-1.5 whitespace-nowrap"
             >
               <Plus className="w-4 h-4" />
@@ -134,13 +157,24 @@ export const AnnouncementsTab: React.FC<AnnouncementsTabProps> = ({ isAdmin = fa
                 </div>
 
                 {isAdmin && (
-                  <button
-                    onClick={() => handleDelete(announcement.id)}
-                    className="opacity-60 hover:opacity-100 p-1.5 rounded-lg hover:bg-red-500/20 text-red-400 transition-all"
-                    title="삭제"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                  <div className="flex items-center space-x-1">
+                    <button
+                      onClick={() => openEditModal(announcement)}
+                      className="opacity-70 hover:opacity-100 p-1.5 rounded-lg hover:bg-slate-800 text-slate-300 hover:text-amber-400 transition-all flex items-center space-x-1 text-xs font-semibold"
+                      title="수정"
+                    >
+                      <Edit className="w-3.5 h-3.5" />
+                      <span>수정</span>
+                    </button>
+                    <button
+                      onClick={() => handleDelete(announcement.id)}
+                      className="opacity-70 hover:opacity-100 p-1.5 rounded-lg hover:bg-red-500/20 text-red-400 transition-all flex items-center space-x-1 text-xs font-semibold"
+                      title="삭제"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>삭제</span>
+                    </button>
+                  </div>
                 )}
               </div>
             </div>
@@ -155,7 +189,7 @@ export const AnnouncementsTab: React.FC<AnnouncementsTabProps> = ({ isAdmin = fa
             <div className="flex items-center justify-between border-b border-slate-800 pb-3">
               <h3 className="text-base font-bold text-white flex items-center gap-2">
                 <Megaphone className="w-4 h-4 text-orange-500" />
-                <span>새 공지사항 작성</span>
+                <span>{editingItem ? '공지사항 수정' : '새 공지사항 작성'}</span>
               </h3>
               <button
                 onClick={() => setShowModal(false)}
@@ -165,7 +199,7 @@ export const AnnouncementsTab: React.FC<AnnouncementsTabProps> = ({ isAdmin = fa
               </button>
             </div>
 
-            <form onSubmit={handleCreate} className="space-y-3 text-xs">
+            <form onSubmit={handleSubmit} className="space-y-3 text-xs">
               <div>
                 <label className="block text-slate-300 font-semibold mb-1">공지 제목</label>
                 <input
@@ -216,7 +250,7 @@ export const AnnouncementsTab: React.FC<AnnouncementsTabProps> = ({ isAdmin = fa
                   disabled={submitting}
                   className="flex-1 py-2.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-semibold transition-all flex items-center justify-center space-x-1"
                 >
-                  {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <span>작성 완료</span>}
+                  {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <span>{editingItem ? '수정 완료' : '작성 완료'}</span>}
                 </button>
               </div>
             </form>
