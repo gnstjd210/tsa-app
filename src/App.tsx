@@ -153,7 +153,7 @@ function AppContent() {
       case 'announcements':
         return <AnnouncementsTab isAdmin={isAdminSession} />;
       case 'standings':
-        return <GroupStandingsTab />;
+        return <GroupStandingsTab isAdmin={isAdminSession} />;
       case 'schedule':
         return <MatchScheduleTab isAdmin={isAdminSession} />;
       case 'teams':

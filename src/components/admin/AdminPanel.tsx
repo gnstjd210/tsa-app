@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { ShieldCheck, RefreshCw, Trophy, Megaphone, CalendarDays, Edit, Sparkles, Plus, Save, FileText, Trash2, Pin, Users, Shield, Camera, Image as ImageIcon, Crop, X, ChevronDown, CheckCircle2 } from 'lucide-react';
 import { useSupabaseData } from '../../context/SupabaseContext';
 import { formatGroupName } from '../../lib/dataService';
+import { OfficialTeamModal } from '../OfficialTeamModal';
 
 interface AdminPanelProps {
   onNavigateTab: (tab: any) => void;
@@ -48,7 +49,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   const [cmsPinned, setCmsPinned] = useState(false);
   const [submittingCms, setSubmittingCms] = useState(false);
 
-  // Requirement 1 & 2: Admin Official Team Management & Group Assignment Modal State
+  // Requirement 1: Single Source of Truth Official Team Modal
+  const [showOfficialModal, setShowOfficialModal] = useState(false);
   const [showAddTeamModal, setShowAddTeamModal] = useState(false);
   const [adminTeamName, setAdminTeamName] = useState('');
   const [adminSelectedGroupId, setAdminSelectedGroupId] = useState('');
@@ -439,32 +441,20 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
           <span className="text-[10px] text-slate-500 font-semibold">teams & group_teams 테이블</span>
         </div>
 
-        <div className="grid grid-cols-2 gap-2 text-xs">
+        <div className="w-full">
           <button
-            onClick={() => {
-              setUploadedImageSrc(null);
-              setCroppedImageBase64('');
-              if (groups.length > 0) setAdminSelectedGroupId(groups[0].id);
-              setShowAddTeamModal(true);
-            }}
-            className="p-3 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-extrabold flex items-center justify-center space-x-1.5 shadow-md shadow-purple-500/20 active-press transition-all"
+            onClick={() => setShowOfficialModal(true)}
+            className="w-full p-3 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-extrabold flex items-center justify-center space-x-1.5 shadow-md shadow-purple-500/20 active-press transition-all text-xs"
           >
             <Plus className="w-4 h-4" />
-            <span>+ 공식 팀 신규 등록</span>
-          </button>
-
-          <button
-            onClick={() => {
-              if (rawTeams.length > 0) setAssignTeamId(rawTeams[0].id);
-              if (groups.length > 0) setAssignGroupId(groups[0].id);
-              setShowGroupAssignModal(true);
-            }}
-            className="p-3 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-extrabold flex items-center justify-center space-x-1.5 shadow-md shadow-orange-500/20 active-press transition-all border border-orange-400/30"
-          >
-            <Users className="w-4 h-4" />
-            <span>조별 등록 (엔트리 배정)</span>
+            <span>[공식 참가팀 등록]</span>
           </button>
         </div>
+
+        <OfficialTeamModal
+          isOpen={showOfficialModal}
+          onClose={() => setShowOfficialModal(false)}
+        />
 
         {/* List of Registered Teams */}
         <div className="pt-2 border-t border-slate-800 space-y-2">

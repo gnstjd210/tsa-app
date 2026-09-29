@@ -1,17 +1,95 @@
 import React, { useEffect, useState } from 'react';
-import { Award, RefreshCw, Sparkles, Loader2, Trophy, Shield, GitFork, X, Calendar, Edit, Save } from 'lucide-react';
+import { Award, RefreshCw, Sparkles, Loader2, Trophy, Shield, GitFork, X, Calendar, Edit, Save, Plus, ChevronDown } from 'lucide-react';
 import type { GroupTeam, Match } from '../../lib/supabase';
 import { useSupabaseData } from '../../context/SupabaseContext';
 import { getTeamMatches, getTeamDetailedStats, formatGroupName } from '../../lib/dataService';
 
-export const GroupStandingsTab: React.FC = () => {
-  const { groups, fetchGroupStandings, refreshAllData, manualEditStandings, loading } = useSupabaseData();
+interface BracketSlot {
+  id: string;
+  round: number; // 1: 6강/8강, 2: 준결승, 3: 결승
+  roundName: string;
+  homeTeamName: string;
+  awayTeamName: string;
+  homeScore?: number;
+  awayScore?: number;
+  dateStr?: string;
+  fieldStr?: string;
+}
+
+interface GroupStandingsTabProps {
+  isAdmin?: boolean;
+}
+
+export const GroupStandingsTab: React.FC<GroupStandingsTabProps> = ({ isAdmin = false }) => {
+  const { groups, teams: rawTeams, fetchGroupStandings, refreshAllData, manualEditStandings, loading } = useSupabaseData();
   const [selectedGroupId, setSelectedGroupId] = useState<string>('');
   const [standings, setStandings] = useState<GroupTeam[]>([]);
   const [refreshing, setRefreshing] = useState(false);
 
   // Tournament Ladder Modal State
   const [showLadderModal, setShowLadderModal] = useState(false);
+
+  // Requirement 2: Bracket Builder State for 6-team Framework & Extension
+  const initialBracketSlots: BracketSlot[] = [
+    {
+      id: 'm1',
+      round: 1,
+      roundName: '6강 1경기',
+      homeTeamName: '1조 1위 (TSA 우먼스)',
+      awayTeamName: '2조 2위 (이데일리 스타즈)',
+      homeScore: 2,
+      awayScore: 1,
+      dateStr: '10월 14일 14:00'
+    },
+    {
+      id: 'm2',
+      round: 1,
+      roundName: '6강 2경기',
+      homeTeamName: '3조 1위 (퀸즈 위너스)',
+      awayTeamName: '4조 2위 (블랙팬서 W)',
+      homeScore: 3,
+      awayScore: 0,
+      dateStr: '10월 14일 15:00'
+    },
+    {
+      id: 'm3',
+      round: 2,
+      roundName: '준결승 1경기',
+      homeTeamName: 'TSA 우먼스',
+      awayTeamName: '퀸즈 위너스',
+      homeScore: 1,
+      awayScore: 0,
+      dateStr: '10월 15일 13:00'
+    },
+    {
+      id: 'm4',
+      round: 2,
+      roundName: '준결승 2경기',
+      homeTeamName: '5조 1위 (골든이글스 W)',
+      awayTeamName: '6조 1위 (파닉스 레이디스)',
+      homeScore: 2,
+      awayScore: 2,
+      dateStr: '10월 15일 14:30'
+    },
+    {
+      id: 'm5',
+      round: 3,
+      roundName: '결승전 (Finals)',
+      homeTeamName: 'TSA 우먼스',
+      awayTeamName: '골든이글스 W',
+      dateStr: '10월 15일 16:00',
+      fieldStr: '해누리 1구장'
+    }
+  ];
+
+  const [bracketSlots, setBracketSlots] = useState<BracketSlot[]>(() => {
+    const saved = localStorage.getItem('tsa_bracket_slots');
+    return saved ? JSON.parse(saved) : initialBracketSlots;
+  });
+
+  useEffect(() => {
+    localStorage.setItem('tsa_bracket_slots', JSON.stringify(bracketSlots));
+  }, [bracketSlots]);
 
   // Team Specific Detail Modal State
   const [selectedTeamData, setSelectedTeamData] = useState<{
@@ -23,7 +101,7 @@ export const GroupStandingsTab: React.FC = () => {
     matches: Match[];
   } | null>(null);
 
-  // Instruction 5: Manual Standings Edit Mode State
+  // Manual Standings Edit Mode State
   const [showManualEdit, setShowManualEdit] = useState(false);
   const [wonInput, setWonInput] = useState<number>(0);
   const [drawnInput, setDrawnInput] = useState<number>(0);
@@ -70,7 +148,7 @@ export const GroupStandingsTab: React.FC = () => {
     }
   };
 
-  // Instruction 5: Fetch real live matches from Supabase matches table
+  // Fetch real live matches from Supabase matches table
   const handleTeamClick = async (gt: GroupTeam) => {
     const teamId = gt.team_id;
     const teamName = gt.team?.name || '팀';
@@ -79,7 +157,7 @@ export const GroupStandingsTab: React.FC = () => {
     try {
       const [stats, matches] = await Promise.all([
         getTeamDetailedStats(teamId),
-        getTeamMatches(teamId) // Real live matches from Supabase
+        getTeamMatches(teamId)
       ]);
       setSelectedTeamData({
         groupTeamId: gt.id,
@@ -90,7 +168,6 @@ export const GroupStandingsTab: React.FC = () => {
         matches
       });
 
-      // Init manual edit values
       setWonInput(gt.won);
       setDrawnInput(gt.drawn);
       setLostInput(gt.lost);
@@ -102,7 +179,6 @@ export const GroupStandingsTab: React.FC = () => {
     }
   };
 
-  // Instruction 5: Force UPDATE group_teams in Supabase
   const handleSaveManualStandings = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedTeamData) return;
@@ -125,6 +201,38 @@ export const GroupStandingsTab: React.FC = () => {
       setSubmittingManual(false);
     }
   };
+
+  // Requirement 2: Dynamically add new match box to bracket
+  const handleAddBracketMatch = () => {
+    const newId = `m_${Date.now()}`;
+    const roundNumber = bracketSlots.length > 5 ? 3 : 2;
+    const newSlot: BracketSlot = {
+      id: newId,
+      round: roundNumber,
+      roundName: `추가 토너먼트 경기 ${bracketSlots.length + 1}`,
+      homeTeamName: '참가팀 선택',
+      awayTeamName: '참가팀 선택',
+      dateStr: '일정 지정 가능'
+    };
+    setBracketSlots([...bracketSlots, newSlot]);
+    alert('새로운 토너먼트 경기 박스가 대진표에 동적으로 연장되었습니다!');
+  };
+
+  // Requirement 2: Update team slot in bracket box via DB teams dropdown
+  const handleUpdateBracketTeam = (slotId: string, side: 'home' | 'away', newTeamName: string) => {
+    setBracketSlots(prev => prev.map(s => {
+      if (s.id === slotId) {
+        return {
+          ...s,
+          [side === 'home' ? 'homeTeamName' : 'awayTeamName']: newTeamName
+        };
+      }
+      return s;
+    }));
+  };
+
+  // Sorted list of DB teams
+  const sortedDbTeams = [...rawTeams].sort((a, b) => a.name.localeCompare(b.name, 'ko'));
 
   return (
     <div className="w-full space-y-4 animate-fadeIn">
@@ -301,6 +409,216 @@ export const GroupStandingsTab: React.FC = () => {
         </div>
       )}
 
+      {/* Requirement 2: 본선 동적 대진표 (Bracket Builder) Section at bottom of tab */}
+      <div className="glass-panel rounded-2xl p-5 border border-cyan-500/30 space-y-4 bg-slate-950/90 shadow-2xl">
+        <div className="flex items-center justify-between border-b border-slate-800 pb-3 flex-wrap gap-2">
+          <div className="flex items-center space-x-2">
+            <GitFork className="w-5 h-5 text-cyan-400" />
+            <div>
+              <h3 className="text-base font-bold text-white flex items-center gap-2">
+                <span>본선 동적 대진표 (Bracket Builder)</span>
+                <span className="px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-400 text-[10px] font-bold border border-cyan-500/30">
+                  PLAYOFF BRACKET
+                </span>
+              </h3>
+              <p className="text-xs text-slate-400">나뭇가지 연결선('ㄱ', 'ㅗ' 모양)으로 연장되는 실시간 토너먼트 대진표입니다.</p>
+            </div>
+          </div>
+
+          {isAdmin && (
+            <button
+              onClick={handleAddBracketMatch}
+              className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-slate-950 font-extrabold text-xs flex items-center space-x-1 shadow-md shadow-cyan-500/20 active-press transition-all cursor-pointer whitespace-nowrap"
+            >
+              <Plus className="w-4 h-4" />
+              <span>[+ 경기 추가]</span>
+            </button>
+          )}
+        </div>
+
+        {/* Tree Branch Bracket Container (Responsive with non-breaking CSS branches) */}
+        <div className="overflow-x-auto py-4 px-2 scrollbar-thin">
+          <div className="min-w-[680px] flex items-center justify-between space-x-6 relative">
+            
+            {/* Round 1: 6강 / 8강 */}
+            <div className="flex-1 space-y-6">
+              <div className="text-center font-bold text-xs text-cyan-400 border-b border-cyan-500/30 pb-1 uppercase">
+                1 라운드 (6강 / 8강)
+              </div>
+
+              <div className="space-y-6">
+                {bracketSlots.filter(s => s.round === 1).map((slot) => (
+                  <div key={slot.id} className="relative group">
+                    <div className="bg-slate-900 border border-slate-800 rounded-xl p-3 space-y-2 shadow-lg hover:border-cyan-500/40 transition-all">
+                      <span className="text-[10px] font-bold text-slate-400 block border-b border-slate-800 pb-1">
+                        {slot.roundName} ({slot.dateStr})
+                      </span>
+
+                      {/* Home Team Slot */}
+                      <div className="flex items-center justify-between text-xs font-semibold text-slate-200">
+                        {isAdmin ? (
+                          <select
+                            value={slot.homeTeamName}
+                            onChange={(e) => handleUpdateBracketTeam(slot.id, 'home', e.target.value)}
+                            className="bg-slate-950 border border-slate-800 rounded px-2 py-1 text-white text-xs font-bold focus:border-cyan-500"
+                          >
+                            <option value={slot.homeTeamName}>{slot.homeTeamName}</option>
+                            {sortedDbTeams.map(t => (
+                              <option key={t.id} value={t.name}>{t.name}</option>
+                            ))}
+                          </select>
+                        ) : (
+                          <span>{slot.homeTeamName}</span>
+                        )}
+                        <span className="text-orange-400 font-bold ml-2">{slot.homeScore ?? '-'}</span>
+                      </div>
+
+                      {/* Away Team Slot */}
+                      <div className="flex items-center justify-between text-xs font-semibold text-slate-300 border-t border-slate-800/80 pt-1.5">
+                        {isAdmin ? (
+                          <select
+                            value={slot.awayTeamName}
+                            onChange={(e) => handleUpdateBracketTeam(slot.id, 'away', e.target.value)}
+                            className="bg-slate-950 border border-slate-800 rounded px-2 py-1 text-white text-xs font-bold focus:border-cyan-500"
+                          >
+                            <option value={slot.awayTeamName}>{slot.awayTeamName}</option>
+                            {sortedDbTeams.map(t => (
+                              <option key={t.id} value={t.name}>{t.name}</option>
+                            ))}
+                          </select>
+                        ) : (
+                          <span>{slot.awayTeamName}</span>
+                        )}
+                        <span className="text-slate-400 ml-2">{slot.awayScore ?? '-'}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Tree Branch Connector 1 ('ㄱ', 'ㅗ' shape connectors) */}
+            <div className="flex flex-col items-center justify-center space-y-8 text-cyan-500/60 font-mono text-xs">
+              <div className="h-16 border-r-2 border-t-2 border-b-2 border-cyan-500/40 w-4 rounded-r-lg" />
+              <div className="h-16 border-r-2 border-t-2 border-b-2 border-cyan-500/40 w-4 rounded-r-lg" />
+            </div>
+
+            {/* Round 2: 준결승전 */}
+            <div className="flex-1 space-y-6">
+              <div className="text-center font-bold text-xs text-amber-400 border-b border-amber-500/30 pb-1 uppercase">
+                준결승전 (Semi-Finals)
+              </div>
+
+              <div className="space-y-6">
+                {bracketSlots.filter(s => s.round === 2).map((slot) => (
+                  <div key={slot.id} className="bg-slate-900 border border-amber-500/30 rounded-xl p-3 space-y-2 shadow-lg">
+                    <span className="text-[10px] font-bold text-amber-400/90 block border-b border-slate-800 pb-1">
+                      {slot.roundName} ({slot.dateStr})
+                    </span>
+
+                    {/* Home Team Slot */}
+                    <div className="flex items-center justify-between text-xs font-bold text-white">
+                      {isAdmin ? (
+                        <select
+                          value={slot.homeTeamName}
+                          onChange={(e) => handleUpdateBracketTeam(slot.id, 'home', e.target.value)}
+                          className="bg-slate-950 border border-slate-800 rounded px-2 py-1 text-white text-xs font-bold focus:border-amber-500"
+                        >
+                          <option value={slot.homeTeamName}>{slot.homeTeamName}</option>
+                          {sortedDbTeams.map(t => (
+                            <option key={t.id} value={t.name}>{t.name}</option>
+                          ))}
+                        </select>
+                      ) : (
+                        <span>{slot.homeTeamName}</span>
+                      )}
+                      <span className="text-amber-400 font-bold ml-2">{slot.homeScore ?? '-'}</span>
+                    </div>
+
+                    {/* Away Team Slot */}
+                    <div className="flex items-center justify-between text-xs text-slate-300 border-t border-slate-800/80 pt-1.5">
+                      {isAdmin ? (
+                        <select
+                          value={slot.awayTeamName}
+                          onChange={(e) => handleUpdateBracketTeam(slot.id, 'away', e.target.value)}
+                          className="bg-slate-950 border border-slate-800 rounded px-2 py-1 text-white text-xs font-bold focus:border-amber-500"
+                        >
+                          <option value={slot.awayTeamName}>{slot.awayTeamName}</option>
+                          {sortedDbTeams.map(t => (
+                            <option key={t.id} value={t.name}>{t.name}</option>
+                          ))}
+                        </select>
+                      ) : (
+                        <span>{slot.awayTeamName}</span>
+                      )}
+                      <span className="text-slate-400 ml-2">{slot.awayScore ?? '-'}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Tree Branch Connector 2 */}
+            <div className="flex flex-col items-center justify-center text-amber-500/60 font-mono text-xs">
+              <div className="h-24 border-r-2 border-t-2 border-b-2 border-amber-500/50 w-5 rounded-r-xl" />
+            </div>
+
+            {/* Round 3: 결승전 */}
+            <div className="w-56 space-y-4">
+              <div className="text-center font-extrabold text-xs text-orange-400 border-b border-orange-500/40 pb-1 uppercase flex items-center justify-center gap-1">
+                <Trophy className="w-4 h-4 text-amber-400" />
+                <span>결승전 (Finals)</span>
+              </div>
+
+              {bracketSlots.filter(s => s.round === 3).map((slot) => (
+                <div key={slot.id} className="bg-gradient-to-b from-orange-500/20 to-slate-900 border-2 border-orange-500/60 rounded-2xl p-4 text-center space-y-3 shadow-2xl">
+                  <span className="px-2 py-0.5 bg-orange-500 text-white rounded text-[10px] font-bold inline-block">
+                    CHAMPIONSHIP MATCH
+                  </span>
+
+                  <div className="space-y-1.5 text-xs">
+                    {isAdmin ? (
+                      <div className="space-y-1">
+                        <select
+                          value={slot.homeTeamName}
+                          onChange={(e) => handleUpdateBracketTeam(slot.id, 'home', e.target.value)}
+                          className="w-full bg-slate-950 border border-slate-800 rounded px-2 py-1 text-white text-xs font-bold text-center"
+                        >
+                          <option value={slot.homeTeamName}>{slot.homeTeamName}</option>
+                          {sortedDbTeams.map(t => (
+                            <option key={t.id} value={t.name}>{t.name}</option>
+                          ))}
+                        </select>
+                        <span className="text-orange-400 font-bold block">VS</span>
+                        <select
+                          value={slot.awayTeamName}
+                          onChange={(e) => handleUpdateBracketTeam(slot.id, 'away', e.target.value)}
+                          className="w-full bg-slate-950 border border-slate-800 rounded px-2 py-1 text-white text-xs font-bold text-center"
+                        >
+                          <option value={slot.awayTeamName}>{slot.awayTeamName}</option>
+                          {sortedDbTeams.map(t => (
+                            <option key={t.id} value={t.name}>{t.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                    ) : (
+                      <div className="font-sports text-base font-bold text-white">
+                        {slot.homeTeamName} vs {slot.awayTeamName}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="text-[11px] text-orange-300 font-semibold border-t border-orange-500/30 pt-2">
+                    {slot.dateStr} ({slot.fieldStr || '해누리 1구장'})
+                  </div>
+                </div>
+              ))}
+            </div>
+
+          </div>
+        </div>
+      </div>
+
       {/* 8강/4강/결승 토너먼트 대진표 모달 */}
       {showLadderModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/85 backdrop-blur-md animate-fadeIn">
@@ -308,7 +626,7 @@ export const GroupStandingsTab: React.FC = () => {
             <div className="flex items-center justify-between border-b border-slate-800 pb-3 flex-shrink-0">
               <div className="flex items-center space-x-2">
                 <GitFork className="w-5 h-5 text-cyan-400" />
-                <h3 className="text-base font-bold text-white">1회 women Tournament - 본선 토너먼트 대진표</h3>
+                <h3 className="text-base font-bold text-white">본선 토너먼트 대진표</h3>
               </div>
               <button
                 onClick={() => setShowLadderModal(false)}
@@ -319,37 +637,28 @@ export const GroupStandingsTab: React.FC = () => {
             </div>
 
             <p className="text-xs text-slate-400 flex items-center gap-1 flex-shrink-0">
-              <span>👉 모바일 기기에서는 좌우로 스크롤하여 8강, 4강, 결승 대진표를 확인하실 수 있습니다.</span>
+              <span>👉 좌우로 스크롤하여 8강, 준결승, 결승 대진표를 확인하실 수 있습니다.</span>
             </p>
 
             <div className="overflow-x-auto py-4 px-2 space-x-6 flex items-center min-h-[300px] scrollbar-thin">
               <div className="flex-shrink-0 w-48 space-y-6">
                 <div className="text-center font-bold text-xs text-cyan-400 border-b border-cyan-500/30 pb-1 uppercase">
-                  8강전 (Quarter-Finals)
+                  8강 / 6강전
                 </div>
 
                 <div className="space-y-4">
-                  <div className="bg-slate-900 border border-slate-800 rounded-xl p-2.5 space-y-1.5 shadow-md">
-                    <div className="flex justify-between items-center text-xs font-semibold text-slate-200">
-                      <span>1조 1위 (TSA 우먼스)</span>
-                      <span className="text-orange-400 font-bold">2</span>
+                  {bracketSlots.filter(s => s.round === 1).map((s) => (
+                    <div key={s.id} className="bg-slate-900 border border-slate-800 rounded-xl p-2.5 space-y-1.5 shadow-md text-xs">
+                      <div className="flex justify-between items-center font-semibold text-slate-200">
+                        <span>{s.homeTeamName}</span>
+                        <span className="text-orange-400 font-bold">{s.homeScore ?? '-'}</span>
+                      </div>
+                      <div className="flex justify-between items-center text-slate-400 border-t border-slate-800 pt-1">
+                        <span>{s.awayTeamName}</span>
+                        <span>{s.awayScore ?? '-'}</span>
+                      </div>
                     </div>
-                    <div className="flex justify-between items-center text-xs text-slate-400 border-t border-slate-800 pt-1">
-                      <span>2조 2위 (이데일리 스타즈)</span>
-                      <span>1</span>
-                    </div>
-                  </div>
-
-                  <div className="bg-slate-900 border border-slate-800 rounded-xl p-2.5 space-y-1.5 shadow-md">
-                    <div className="flex justify-between items-center text-xs font-semibold text-slate-200">
-                      <span>3조 1위 (퀸즈 위너스)</span>
-                      <span className="text-orange-400 font-bold">3</span>
-                    </div>
-                    <div className="flex justify-between items-center text-xs text-slate-400 border-t border-slate-800 pt-1">
-                      <span>4조 2위 (블랙팬서 W)</span>
-                      <span>0</span>
-                    </div>
-                  </div>
+                  ))}
                 </div>
               </div>
 
@@ -360,16 +669,18 @@ export const GroupStandingsTab: React.FC = () => {
                   준결승전 (Semi-Finals)
                 </div>
 
-                <div className="bg-slate-900 border border-amber-500/30 rounded-xl p-2.5 space-y-1.5 shadow-lg">
-                  <div className="flex justify-between items-center text-xs font-bold text-white">
-                    <span>TSA 우먼스</span>
-                    <span className="text-amber-400 font-bold">1</span>
+                {bracketSlots.filter(s => s.round === 2).map((s) => (
+                  <div key={s.id} className="bg-slate-900 border border-amber-500/30 rounded-xl p-2.5 space-y-1.5 shadow-lg text-xs">
+                    <div className="flex justify-between items-center font-bold text-white">
+                      <span>{s.homeTeamName}</span>
+                      <span className="text-amber-400 font-bold">{s.homeScore ?? '-'}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-slate-300 border-t border-slate-800 pt-1">
+                      <span>{s.awayTeamName}</span>
+                      <span>{s.awayScore ?? '-'}</span>
+                    </div>
                   </div>
-                  <div className="flex justify-between items-center text-xs text-slate-300 border-t border-slate-800 pt-1">
-                    <span>퀸즈 위너스</span>
-                    <span>0</span>
-                  </div>
-                </div>
+                ))}
               </div>
 
               <div className="text-slate-600 font-bold">➔</div>
@@ -380,17 +691,19 @@ export const GroupStandingsTab: React.FC = () => {
                   <span>결승전 (Finals)</span>
                 </div>
 
-                <div className="bg-gradient-to-b from-orange-500/20 to-slate-900 border-2 border-orange-500/60 rounded-2xl p-3 text-center space-y-2 shadow-2xl">
-                  <span className="px-2 py-0.5 bg-orange-500 text-white rounded text-[10px] font-bold">
-                    CHAMPIONSHIP MATCH
-                  </span>
-                  <div className="font-sports text-lg font-bold text-white">
-                    TSA 우먼스 vs TBD
+                {bracketSlots.filter(s => s.round === 3).map((s) => (
+                  <div key={s.id} className="bg-gradient-to-b from-orange-500/20 to-slate-900 border-2 border-orange-500/60 rounded-2xl p-3 text-center space-y-2 shadow-2xl">
+                    <span className="px-2 py-0.5 bg-orange-500 text-white rounded text-[10px] font-bold">
+                      CHAMPIONSHIP MATCH
+                    </span>
+                    <div className="font-sports text-sm font-bold text-white">
+                      {s.homeTeamName} vs {s.awayTeamName}
+                    </div>
+                    <div className="text-[11px] text-orange-300 font-semibold">
+                      {s.dateStr}
+                    </div>
                   </div>
-                  <div className="text-[11px] text-orange-300 font-semibold">
-                    10월 15일 (일) 16:00 해누리 1구장
-                  </div>
-                </div>
+                ))}
               </div>
             </div>
 
@@ -406,7 +719,7 @@ export const GroupStandingsTab: React.FC = () => {
         </div>
       )}
 
-      {/* 팀 전용 상세 성적 & 수동 수정 모달 (Instruction 5) */}
+      {/* 팀 전용 상세 성적 & 수동 수정 모달 */}
       {selectedTeamData && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-sm animate-fadeIn">
           <div className="glass-panel w-full max-w-md rounded-2xl p-5 border border-cyan-500/40 shadow-2xl space-y-4 max-h-[85vh] overflow-y-auto">
@@ -429,7 +742,6 @@ export const GroupStandingsTab: React.FC = () => {
               </button>
             </div>
 
-            {/* Instruction 5: Manual Standings Edit Toggle Form */}
             {showManualEdit ? (
               <form onSubmit={handleSaveManualStandings} className="p-3.5 bg-slate-900/90 rounded-2xl border border-cyan-500/50 space-y-3 animate-fadeIn text-xs">
                 <div className="flex justify-between items-center border-b border-slate-800 pb-2">
@@ -530,7 +842,6 @@ export const GroupStandingsTab: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Instruction 5: Manual Standings Edit Trigger Button */}
                 <button
                   onClick={() => setShowManualEdit(true)}
                   className="w-full mt-3 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-cyan-400 font-bold text-xs flex items-center justify-center space-x-1 active-press transition-all"
@@ -541,7 +852,6 @@ export const GroupStandingsTab: React.FC = () => {
               </div>
             )}
 
-            {/* Instruction 5: Real Live Matches from Supabase matches table */}
             <div className="space-y-2 pt-2 border-t border-slate-800/80">
               <h4 className="text-xs font-bold text-slate-200 flex items-center gap-1">
                 <Calendar className="w-3.5 h-3.5 text-cyan-400" />
