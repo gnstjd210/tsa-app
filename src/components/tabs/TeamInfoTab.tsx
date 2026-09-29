@@ -18,9 +18,19 @@ interface TeamWithStats extends Team {
   };
 }
 
-export const TeamInfoTab: React.FC = () => {
+interface TeamInfoTabProps {
+  isAdmin?: boolean;
+}
+
+export const TeamInfoTab: React.FC<TeamInfoTabProps> = ({ isAdmin = false }) => {
   const { teams: rawTeams, groups, loading, addTeam, removeTeam, addGroup, removeGroup, mapTeamToGroup } = useSupabaseData();
   const [teamsWithStats, setTeamsWithStats] = useState<TeamWithStats[]>([]);
+
+  // RBAC Admin authorization state check
+  const isUserAdmin =
+    isAdmin ||
+    sessionStorage.getItem('tsa_admin_auth') === 'true' ||
+    localStorage.getItem('tsa_admin_auth') === 'true';
   const [showModal, setShowModal] = useState(false);
   const [selectedTeam, setSelectedTeam] = useState<TeamWithStats | null>(null);
 
@@ -207,32 +217,35 @@ export const TeamInfoTab: React.FC = () => {
           <p className="text-xs text-slate-400 mt-1">소속 조(1조~6조)를 지정하거나 기존 팀의 조별 엔트리를 개별 배정할 수 있습니다.</p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          <button
-            onClick={() => {
-              setUploadedImageSrc(null);
-              setCroppedImageBase64('');
-              if (groups.length > 0) setSelectedGroupId(groups[0].id);
-              setShowModal(true);
-            }}
-            className="flex items-center space-x-1.5 px-3 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold shadow-lg shadow-purple-500/20 active-press transition-all whitespace-nowrap"
-          >
-            <Plus className="w-4 h-4" />
-            <span>팀 추가</span>
-          </button>
+        {/* RBAC: Only render action buttons for authenticated admins */}
+        {isUserAdmin && (
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={() => {
+                setUploadedImageSrc(null);
+                setCroppedImageBase64('');
+                if (groups.length > 0) setSelectedGroupId(groups[0].id);
+                setShowModal(true);
+              }}
+              className="flex items-center space-x-1.5 px-3 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold shadow-lg shadow-purple-500/20 active-press transition-all whitespace-nowrap"
+            >
+              <Plus className="w-4 h-4" />
+              <span>팀 추가</span>
+            </button>
 
-          <button
-            onClick={() => {
-              if (rawTeams.length > 0) setAssignTeamId(rawTeams[0].id);
-              if (groups.length > 0) setAssignGroupId(groups[0].id);
-              setShowGroupAssignModal(true);
-            }}
-            className="flex items-center space-x-1.5 px-3.5 py-2 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white text-xs font-extrabold shadow-lg shadow-orange-500/20 active-press transition-all whitespace-nowrap border border-orange-400/30"
-          >
-            <Users className="w-4 h-4" />
-            <span>조별 등록(엔트리 배정)</span>
-          </button>
-        </div>
+            <button
+              onClick={() => {
+                if (rawTeams.length > 0) setAssignTeamId(rawTeams[0].id);
+                if (groups.length > 0) setAssignGroupId(groups[0].id);
+                setShowGroupAssignModal(true);
+              }}
+              className="flex items-center space-x-1.5 px-3.5 py-2 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white text-xs font-extrabold shadow-lg shadow-orange-500/20 active-press transition-all whitespace-nowrap border border-orange-400/30"
+            >
+              <Users className="w-4 h-4" />
+              <span>조별 등록(엔트리 배정)</span>
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Teams Grid List */}
@@ -245,7 +258,7 @@ export const TeamInfoTab: React.FC = () => {
         <div className="w-full glass-panel rounded-2xl p-8 text-center border border-slate-800">
           <Shield className="w-10 h-10 text-slate-600 mx-auto mb-2" />
           <p className="text-sm font-semibold text-slate-300">등록된 팀이 없습니다.</p>
-          <p className="text-xs text-slate-500 mt-1">우측 상단 [팀 추가] 버튼을 클릭해 소속 조와 함께 등록하세요.</p>
+          <p className="text-xs text-slate-500 mt-1">대회에 등록된 참가팀 목록이 표시됩니다.</p>
         </div>
       ) : (
         <div className="w-full grid grid-cols-1 gap-3">
@@ -289,13 +302,15 @@ export const TeamInfoTab: React.FC = () => {
                     </span>
                   </div>
 
-                  <button
-                    onClick={(e) => handleDeleteTeam(t.id, e)}
-                    className="p-2 rounded-xl text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-colors"
-                    title="팀 삭제"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                  {isUserAdmin && (
+                    <button
+                      onClick={(e) => handleDeleteTeam(t.id, e)}
+                      className="p-2 rounded-xl text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                      title="팀 삭제"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
                 </div>
               </div>
             </div>

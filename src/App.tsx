@@ -117,7 +117,7 @@ function AppContent() {
       case 'schedule':
         return <MatchScheduleTab isAdmin={isAdminRoute} />;
       case 'teams':
-        return <TeamInfoTab />;
+        return <TeamInfoTab isAdmin={isAdminRoute} />;
       default:
         return <HomeTab onNavigateTab={(tab) => setActiveTab(tab)} />;
     }

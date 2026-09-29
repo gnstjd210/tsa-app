@@ -70,3 +70,21 @@ export interface Announcement {
   is_pinned: boolean;
   created_at?: string;
 }
+
+export interface Profile {
+  id: string;
+  email: string;
+  team_name?: string;
+  role: 'user' | 'admin';
+  created_at?: string;
+}
+
+export interface Post {
+  id: string;
+  category: '공지사항' | '향후 대회 일정' | '스폰서/파트너십';
+  title: string;
+  content: string;
+  author?: string;
+  is_pinned?: boolean;
+  created_at?: string;
+}

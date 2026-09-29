@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Lock, Mail, ShieldCheck, X, Sparkles, Shield, CheckSquare, Square } from 'lucide-react';
+import { Lock, Mail, ShieldCheck, X, Sparkles, Shield, CheckSquare, Square, CheckCircle2, AlertCircle } from 'lucide-react';
 import { useSupabaseData } from '../context/SupabaseContext';
+import { createProfile } from '../lib/dataService';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -29,6 +30,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const [agreedPrivacy, setAgreedPrivacy] = useState(false);
 
   const [loading, setLoading] = useState(false);
+
+  // Password Policy Checker (Minimum 8 chars, letter, number, special char)
+  const isMinLength = signupPassword.length >= 8;
+  const hasLetter = /[a-zA-Z]/.test(signupPassword);
+  const hasNumber = /[0-9]/.test(signupPassword);
+  const hasSpecial = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(signupPassword);
+  const isPasswordValid = isMinLength && hasLetter && hasNumber && hasSpecial;
 
   // Sync mode with initialMode prop whenever modal is opened
   useEffect(() => {
@@ -83,14 +91,24 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     }
     if (!signupTeamName.trim() || !signupEmail.trim() || !signupPassword.trim()) return;
 
+    if (!isPasswordValid) {
+      alert('비밀번호는 최소 8자리 이상, 영문, 숫자, 특수문자를 포함해야 합니다.');
+      return;
+    }
+
     try {
       setLoading(true);
-      await addTeam(signupTeamName);
-      if (onSuccess) onSuccess(signupEmail, signupTeamName);
+      // 1. Insert Profile into Supabase profiles table
+      await createProfile(signupEmail.trim(), signupTeamName.trim(), 'user');
+      // 2. Add Team to teams table
+      await addTeam(signupTeamName.trim());
+      // 3. Skip email OTP wait delay & instant login
+      if (onSuccess) onSuccess(signupEmail.trim(), signupTeamName.trim(), false);
       onClose();
-      alert(`[${signupTeamName}] 팀 회원가입이 성공적으로 완료되었습니다!`);
+      alert(`[${signupTeamName.trim()}] 팀 회원가입 및 프로필 생성이 성공적으로 완료되었습니다!`);
     } catch (err) {
-      console.error('Signup team creation error:', err);
+      console.error('Signup team/profile creation error:', err);
+      alert('회원가입 처리 중 오류가 발생했습니다.');
     } finally {
       setLoading(false);
     }
@@ -224,12 +242,51 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 <input
                   type="password"
                   required
-                  placeholder="••••••••"
+                  placeholder="8자리 이상 (영문, 숫자, 특수문자)"
                   value={signupPassword}
                   onChange={(e) => setSignupPassword(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-800 rounded-xl pl-9 pr-3 py-2.5 text-white focus:outline-none focus:border-orange-500 transition-colors"
+                  className={`w-full bg-slate-900 border rounded-xl pl-9 pr-3 py-2.5 text-white focus:outline-none transition-colors ${
+                    signupPassword
+                      ? isPasswordValid
+                        ? 'border-emerald-500'
+                        : 'border-rose-500'
+                      : 'border-slate-800 focus:border-orange-500'
+                  }`}
                 />
               </div>
+
+              {/* Real-time Password Helper Feedback Text */}
+              {signupPassword.length > 0 && (
+                <div className="mt-1.5 text-[11px] leading-snug">
+                  {isPasswordValid ? (
+                    <div className="flex items-center space-x-1 text-emerald-400 font-semibold">
+                      <CheckCircle2 className="w-3.5 h-3.5 flex-shrink-0" />
+                      <span>✅ 사용 가능한 안전한 비밀번호입니다!</span>
+                    </div>
+                  ) : (
+                    <div className="space-y-0.5 text-rose-400 font-medium">
+                      <div className="flex items-center space-x-1">
+                        <AlertCircle className="w-3.5 h-3.5 flex-shrink-0 text-rose-400" />
+                        <span>비밀번호 필수 조건 (8자 이상, 영문, 숫자, 특수문자):</span>
+                      </div>
+                      <div className="pl-4 flex flex-wrap gap-x-2 text-[10px]">
+                        <span className={isMinLength ? 'text-emerald-400 font-bold' : 'text-slate-400'}>
+                          {isMinLength ? '✓' : '•'} 8자 이상
+                        </span>
+                        <span className={hasLetter ? 'text-emerald-400 font-bold' : 'text-slate-400'}>
+                          {hasLetter ? '✓' : '•'} 영문
+                        </span>
+                        <span className={hasNumber ? 'text-emerald-400 font-bold' : 'text-slate-400'}>
+                          {hasNumber ? '✓' : '•'} 숫자
+                        </span>
+                        <span className={hasSpecial ? 'text-emerald-400 font-bold' : 'text-slate-400'}>
+                          {hasSpecial ? '✓' : '•'} 특수문자
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Mandatory Privacy Policy Checkbox */}
@@ -252,9 +309,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
             <button
               type="submit"
-              disabled={loading || !agreedPrivacy}
+              disabled={loading || !agreedPrivacy || !isPasswordValid}
               className={`w-full py-3 rounded-xl font-bold text-sm shadow-lg active-press transition-all mt-4 flex items-center justify-center space-x-1.5 ${
-                agreedPrivacy
+                agreedPrivacy && isPasswordValid
                   ? 'bg-orange-500 hover:bg-orange-600 text-white shadow-orange-500/25'
                   : 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700'
               }`}

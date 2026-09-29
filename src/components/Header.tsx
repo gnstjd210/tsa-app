@@ -1,5 +1,5 @@
 import React from 'react';
-import { Trophy, LogIn, UserPlus, Sparkles, Users } from 'lucide-react';
+import { Trophy, LogIn, UserPlus, Sparkles, Users, User } from 'lucide-react';
 import { useSupabaseData } from '../context/SupabaseContext';
 
 interface HeaderProps {
@@ -73,12 +73,18 @@ export const Header: React.FC<HeaderProps> = ({
               </button>
             ) : currentUser ? (
               <div className="flex items-center space-x-1.5">
-                <span className="text-[11px] font-semibold text-slate-300 max-w-[70px] truncate">
-                  {currentUser}
-                </span>
+                <button
+                  onClick={() => alert(`👤 내 프로필 정보\n계정: ${currentUser}`)}
+                  className="px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-200 text-xs font-semibold flex items-center space-x-1 hover:border-orange-500/50 transition-all max-w-[120px] truncate"
+                  title="마이페이지 (내 프로필)"
+                >
+                  <User className="w-3.5 h-3.5 text-orange-400 flex-shrink-0" />
+                  <span className="truncate">{currentUser.split('@')[0]}</span>
+                </button>
+
                 <button
                   onClick={onLogout}
-                  className="text-[11px] text-slate-400 hover:text-slate-200 px-2 py-1 rounded bg-slate-900 border border-slate-800 whitespace-nowrap"
+                  className="px-2.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-400 hover:text-white text-xs font-semibold active-press transition-all whitespace-nowrap"
                 >
                   로그아웃
                 </button>

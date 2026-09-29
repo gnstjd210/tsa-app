@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { supabase } from '../lib/supabase';
-import type { Announcement, Team, Match, Group, GroupTeam, Tournament } from '../lib/supabase';
+import type { Announcement, Team, Match, Group, GroupTeam, Tournament, Post } from '../lib/supabase';
 import {
   getAnnouncements,
   getTeams,
@@ -20,6 +20,9 @@ import {
   createGroup,
   deleteGroup,
   assignTeamToGroup,
+  getPosts,
+  createPost,
+  deletePost,
   seedInitialDataIfNeeded
 } from '../lib/dataService';
 
@@ -67,6 +70,15 @@ interface SupabaseContextType {
       played?: number;
     }
   ) => Promise<void>;
+  posts: Post[];
+  addPost: (postData: {
+    category: '공지사항' | '향후 대회 일정' | '스폰서/파트너십';
+    title: string;
+    content: string;
+    author?: string;
+    is_pinned?: boolean;
+  }) => Promise<void>;
+  removePost: (id: string) => Promise<void>;
   fetchGroupStandings: (groupId: string) => Promise<GroupTeam[]>;
 }
 
@@ -77,6 +89,7 @@ export const SupabaseProvider: React.FC<{ children: ReactNode }> = ({ children }
   const [teams, setTeams] = useState<Team[]>([]);
   const [matches, setMatches] = useState<Match[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
+  const [posts, setPosts] = useState<Post[]>([]);
   const [tournament, setTournament] = useState<Tournament | null>(null);
   const [sponsorTitle, setSponsorTitle] = useState<string>('이데일리컵');
   const [loading, setLoading] = useState(true);
@@ -87,18 +100,20 @@ export const SupabaseProvider: React.FC<{ children: ReactNode }> = ({ children }
       setRefreshing(true);
       await seedInitialDataIfNeeded();
 
-      const [annData, teamData, matchData, groupData, tourneyData] = await Promise.all([
+      const [annData, teamData, matchData, groupData, tourneyData, postData] = await Promise.all([
         getAnnouncements(),
         getTeams(),
         getMatches(),
         getGroups(),
-        getTournaments()
+        getTournaments(),
+        getPosts()
       ]);
 
       setAnnouncements(annData);
       setTeams(teamData);
       setMatches(matchData);
       setGroups(groupData);
+      setPosts(postData);
       
       if (tourneyData && tourneyData.length > 0) {
         setTournament(tourneyData[0]);
@@ -243,6 +258,22 @@ export const SupabaseProvider: React.FC<{ children: ReactNode }> = ({ children }
     await refreshAllData();
   };
 
+  const addPost = async (postData: {
+    category: '공지사항' | '향후 대회 일정' | '스폰서/파트너십';
+    title: string;
+    content: string;
+    author?: string;
+    is_pinned?: boolean;
+  }) => {
+    await createPost(postData);
+    await refreshAllData();
+  };
+
+  const removePost = async (id: string) => {
+    await deletePost(id);
+    await refreshAllData();
+  };
+
   const fetchGroupStandings = async (groupId: string) => {
     return await getGroupStandings(groupId);
   };
@@ -254,6 +285,7 @@ export const SupabaseProvider: React.FC<{ children: ReactNode }> = ({ children }
         teams,
         matches,
         groups,
+        posts,
         tournament,
         sponsorTitle,
         loading,
@@ -270,6 +302,8 @@ export const SupabaseProvider: React.FC<{ children: ReactNode }> = ({ children }
         addMatch,
         editMatchScore,
         manualEditStandings,
+        addPost,
+        removePost,
         fetchGroupStandings
       }}
     >

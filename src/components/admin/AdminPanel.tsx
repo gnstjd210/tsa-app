@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ShieldCheck, RefreshCw, Trophy, Megaphone, CalendarDays, Edit, Sparkles, Plus, Save } from 'lucide-react';
+import { ShieldCheck, RefreshCw, Trophy, Megaphone, CalendarDays, Edit, Sparkles, Plus, Save, FileText, Trash2, Pin } from 'lucide-react';
 import { useSupabaseData } from '../../context/SupabaseContext';
 
 interface AdminPanelProps {
@@ -13,7 +13,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   onManualSeed,
   seeding
 }) => {
-  const { sponsorTitle, updateSponsorTitle, addAnnouncement } = useSupabaseData();
+  const { sponsorTitle, updateSponsorTitle, addAnnouncement, posts, addPost, removePost } = useSupabaseData();
   const [newSponsorInput, setNewSponsorInput] = useState(sponsorTitle || '이데일리 컵');
   const [savingSponsor, setSavingSponsor] = useState(false);
 
@@ -23,6 +23,13 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   const [scheduleDate, setScheduleDate] = useState('');
   const [scheduleLocation, setScheduleLocation] = useState('');
   const [submittingContent, setSubmittingContent] = useState(false);
+
+  // Requirement 5: CMS Post Management Form State
+  const [cmsCategory, setCmsCategory] = useState<'공지사항' | '향후 대회 일정' | '스폰서/파트너십'>('공지사항');
+  const [cmsTitle, setCmsTitle] = useState('');
+  const [cmsContent, setCmsContent] = useState('');
+  const [cmsPinned, setCmsPinned] = useState(false);
+  const [submittingCms, setSubmittingCms] = useState(false);
 
   const handleSponsorTitleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -58,6 +65,40 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
       console.error(err);
     } finally {
       setSubmittingContent(false);
+    }
+  };
+
+  const handleCreateCmsPost = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!cmsTitle.trim() || !cmsContent.trim()) return;
+    try {
+      setSubmittingCms(true);
+      await addPost({
+        category: cmsCategory,
+        title: cmsTitle.trim(),
+        content: cmsContent.trim(),
+        is_pinned: cmsPinned,
+        author: '최고 관리자'
+      });
+      setCmsTitle('');
+      setCmsContent('');
+      setCmsPinned(false);
+      alert(`[${cmsCategory}] 게시글이 성공적으로 등록되었습니다!`);
+    } catch (err) {
+      console.error('Error creating CMS post:', err);
+      alert('게시글 등록에 실패했습니다.');
+    } finally {
+      setSubmittingCms(false);
+    }
+  };
+
+  const handleDeleteCmsPost = async (id: string) => {
+    if (!window.confirm('이 게시글을 삭제하시겠습니까?')) return;
+    try {
+      await removePost(id);
+    } catch (err) {
+      console.error('Error deleting post:', err);
+      alert('게시글 삭제 실패');
     }
   };
 
@@ -116,11 +157,140 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
         </form>
       </div>
 
+      {/* Requirement 5: Admin CMS (게시물 관리) Form & Live List */}
+      <div className="w-full glass-panel p-4 rounded-2xl border border-blue-500/30 bg-slate-900/90 space-y-4">
+        <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+          <div className="flex items-center space-x-2 text-xs font-bold text-blue-400">
+            <FileText className="w-4 h-4 text-blue-400" />
+            <span>[Admin CMS] 게시물 작성 및 카테고리 관리</span>
+          </div>
+          <span className="text-[10px] text-slate-500 font-semibold">Supabase posts 테이블 연동</span>
+        </div>
+
+        <form onSubmit={handleCreateCmsPost} className="space-y-3 text-xs">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <div>
+              <label className="block text-slate-300 font-semibold mb-1">카테고리 선택</label>
+              <select
+                value={cmsCategory}
+                onChange={(e) => setCmsCategory(e.target.value as any)}
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white font-bold"
+              >
+                <option value="공지사항">📢 공지사항</option>
+                <option value="향후 대회 일정">🏆 향후 대회 일정</option>
+                <option value="스폰서/파트너십">🤝 스폰서 / 파트너십</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-slate-300 font-semibold mb-1">게시물 제목</label>
+              <input
+                type="text"
+                required
+                placeholder="제목을 입력하세요"
+                value={cmsTitle}
+                onChange={(e) => setCmsTitle(e.target.value)}
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-slate-300 font-semibold mb-1">게시물 상세 내용</label>
+            <textarea
+              required
+              rows={3}
+              placeholder="내용을 입력하세요..."
+              value={cmsContent}
+              onChange={(e) => setCmsContent(e.target.value)}
+              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white resize-none"
+            />
+          </div>
+
+          <div className="flex items-center justify-between pt-1">
+            <label className="flex items-center space-x-2 cursor-pointer text-slate-300 text-xs">
+              <input
+                type="checkbox"
+                checked={cmsPinned}
+                onChange={(e) => setCmsPinned(e.target.checked)}
+                className="rounded accent-orange-500"
+              />
+              <span className="flex items-center gap-1 font-semibold">
+                <Pin className="w-3.5 h-3.5 text-amber-400" />
+                <span>상단 고정 (Pinned)</span>
+              </span>
+            </label>
+
+            <button
+              type="submit"
+              disabled={submittingCms || !cmsTitle.trim() || !cmsContent.trim()}
+              className="px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xs rounded-xl flex items-center space-x-1.5 shadow-md shadow-blue-500/20 active-press transition-all"
+            >
+              <Plus className="w-4 h-4" />
+              <span>{submittingCms ? '등록 중...' : '게시물 작성 완료'}</span>
+            </button>
+          </div>
+        </form>
+
+        {/* Live CMS Posts List */}
+        <div className="pt-2 border-t border-slate-800 space-y-2">
+          <h4 className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+            등록된 CMS 게시물 목록 ({posts.length}건)
+          </h4>
+
+          {posts.length === 0 ? (
+            <div className="p-4 bg-slate-950 rounded-xl text-center text-slate-500 text-xs">
+              등록된 CMS 게시물이 없습니다.
+            </div>
+          ) : (
+            <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+              {posts.map((p) => (
+                <div
+                  key={p.id}
+                  className="p-3 bg-slate-950 rounded-xl border border-slate-800 flex items-start justify-between gap-2"
+                >
+                  <div className="space-y-1 min-w-0 flex-1">
+                    <div className="flex items-center space-x-2 flex-wrap gap-y-1">
+                      <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${
+                        p.category === '공지사항'
+                          ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                          : p.category === '향후 대회 일정'
+                          ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30'
+                          : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                      }`}>
+                        {p.category}
+                      </span>
+                      {p.is_pinned && (
+                        <span className="px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-400 text-[9px] font-extrabold">
+                          📌 고정됨
+                        </span>
+                      )}
+                      <span className="text-white text-xs font-bold truncate">{p.title}</span>
+                    </div>
+                    <p className="text-slate-400 text-[11px] line-clamp-2 leading-relaxed">
+                      {p.content}
+                    </p>
+                  </div>
+
+                  <button
+                    onClick={() => handleDeleteCmsPost(p.id)}
+                    className="p-1.5 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-colors flex-shrink-0"
+                    title="게시물 삭제"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* Instruction 4: Home Content Editing Buttons */}
       <div className="w-full glass-panel p-4 rounded-2xl border border-slate-800 space-y-3">
         <h3 className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
           <Edit className="w-4 h-4 text-blue-400" />
-          <span>홈 화면(Home) 콘텐츠 편집 & 게시글 관리</span>
+          <span>홈 화면(Home) Quick 콘텐츠 편집</span>
         </h3>
 
         <div className="grid grid-cols-2 gap-2 text-xs">

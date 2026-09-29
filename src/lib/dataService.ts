@@ -566,3 +566,58 @@ export async function getTeamDetailedStats(teamId: string) {
     winRate: played > 0 ? Math.round((won / played) * 100) : 0
   };
 }
+
+// Profiles API (Instruction 3: Insert user metadata upon signup)
+export async function createProfile(email: string, teamName?: string, role: 'user' | 'admin' = 'user') {
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .insert([{ email, team_name: teamName, role }])
+      .select();
+    if (error) {
+      console.warn('Profile table insert notice:', error.message);
+    }
+    return data ? (data[0] as Profile) : null;
+  } catch (err) {
+    console.warn('Profile table insert fallback:', err);
+    return null;
+  }
+}
+
+// Posts / CMS API (Instruction 5: Admin CMS Posts Management)
+export async function getPosts() {
+  try {
+    const { data, error } = await supabase
+      .from('posts')
+      .select('*')
+      .order('created_at', { ascending: false });
+    if (error) {
+      console.warn('Posts table query notice:', error.message);
+      return [] as Post[];
+    }
+    return data as Post[];
+  } catch (err) {
+    console.warn('Posts table query fallback:', err);
+    return [] as Post[];
+  }
+}
+
+export async function createPost(postData: {
+  category: '공지사항' | '향후 대회 일정' | '스폰서/파트너십';
+  title: string;
+  content: string;
+  author?: string;
+  is_pinned?: boolean;
+}) {
+  const { data, error } = await supabase
+    .from('posts')
+    .insert([postData])
+    .select();
+  if (error) throw error;
+  return data[0] as Post;
+}
+
+export async function deletePost(id: string) {
+  const { error } = await supabase.from('posts').delete().eq('id', id);
+  if (error) throw error;
+}
