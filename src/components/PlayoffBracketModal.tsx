@@ -37,28 +37,32 @@ export interface MatchNodeData {
 // React Flow Figma-style Custom Node Component
 const MatchNodeCard: React.FC<NodeProps<MatchNodeData>> = ({ id, data, selected }) => {
   const isFinal = data.isFinal || data.roundTitle?.includes('결승');
-  const isAdmin = data.isAdmin;
+  const isAdmin = !!data.isAdmin;
 
   return (
     <div
       className={`glass-panel rounded-2xl p-4 border-2 ${
         isFinal
           ? 'border-amber-400 bg-gradient-to-b from-amber-500/20 via-slate-900 to-slate-950 shadow-2xl shadow-amber-500/30'
-          : selected
+          : selected && isAdmin
           ? 'border-white bg-slate-900 shadow-2xl scale-105'
           : 'border-slate-700 bg-slate-900/95 shadow-xl'
       } space-y-2.5 relative min-w-[270px] max-w-[300px] transition-all group hover:border-white`}
     >
-      {/* Target & Source Handles for React Flow Automatic Connecting Lines */}
-      <Handle type="target" position={Position.Left} id="target-left" className="!bg-white !w-3 !h-3 !border-2 !border-slate-950" />
-      <Handle type="target" position={Position.Right} id="target-right" className="!bg-white !w-3 !h-3 !border-2 !border-slate-950" />
-      <Handle type="target" position={Position.Top} id="target-top" className="!bg-white !w-3 !h-3 !border-2 !border-slate-950" />
+      {/* Target & Source Handles for React Flow Lines (Hidden for Regular Users) */}
+      {isAdmin && (
+        <>
+          <Handle type="target" position={Position.Left} id="target-left" className="!bg-white !w-3 !h-3 !border-2 !border-slate-950" />
+          <Handle type="target" position={Position.Right} id="target-right" className="!bg-white !w-3 !h-3 !border-2 !border-slate-950" />
+          <Handle type="target" position={Position.Top} id="target-top" className="!bg-white !w-3 !h-3 !border-2 !border-slate-950" />
 
-      <Handle type="source" position={Position.Left} id="source-left" className="!bg-white !w-3 !h-3 !border-2 !border-slate-950" />
-      <Handle type="source" position={Position.Right} id="source-right" className="!bg-white !w-3 !h-3 !border-2 !border-slate-950" />
-      <Handle type="source" position={Position.Bottom} id="source-bottom" className="!bg-white !w-3 !h-3 !border-2 !border-slate-950" />
+          <Handle type="source" position={Position.Left} id="source-left" className="!bg-white !w-3 !h-3 !border-2 !border-slate-950" />
+          <Handle type="source" position={Position.Right} id="source-right" className="!bg-white !w-3 !h-3 !border-2 !border-slate-950" />
+          <Handle type="source" position={Position.Bottom} id="source-bottom" className="!bg-white !w-3 !h-3 !border-2 !border-slate-950" />
+        </>
+      )}
 
-      {/* Node Header: Round Title (Inline Editable for Admin) + Delete Button */}
+      {/* Node Header: Round Title (Inline Editable for Admin, Read-only for Regular User) */}
       <div className="flex items-center justify-between border-b border-slate-800 pb-2 gap-2">
         {isAdmin ? (
           <div className="flex items-center space-x-1 flex-1">
@@ -89,7 +93,7 @@ const MatchNodeCard: React.FC<NodeProps<MatchNodeData>> = ({ id, data, selected 
         )}
       </div>
 
-      {/* Home Team Slot: Dropdown + Score Input */}
+      {/* Home Team Slot */}
       <div className="flex items-center justify-between text-xs font-bold text-white gap-2">
         {isAdmin ? (
           <select
@@ -103,7 +107,7 @@ const MatchNodeCard: React.FC<NodeProps<MatchNodeData>> = ({ id, data, selected 
             ))}
           </select>
         ) : (
-          <span className="truncate flex-1">{data.homeTeamName}</span>
+          <span className="truncate flex-1 font-bold text-slate-100">{data.homeTeamName}</span>
         )}
 
         {isAdmin ? (
@@ -120,7 +124,7 @@ const MatchNodeCard: React.FC<NodeProps<MatchNodeData>> = ({ id, data, selected 
         )}
       </div>
 
-      {/* Away Team Slot: Dropdown + Score Input */}
+      {/* Away Team Slot */}
       <div className="flex items-center justify-between text-xs font-semibold text-slate-300 border-t border-slate-800/80 pt-2 gap-2">
         {isAdmin ? (
           <select
@@ -134,7 +138,7 @@ const MatchNodeCard: React.FC<NodeProps<MatchNodeData>> = ({ id, data, selected 
             ))}
           </select>
         ) : (
-          <span className="truncate flex-1">{data.awayTeamName}</span>
+          <span className="truncate flex-1 font-semibold text-slate-300">{data.awayTeamName}</span>
         )}
 
         {isAdmin ? (
@@ -151,7 +155,7 @@ const MatchNodeCard: React.FC<NodeProps<MatchNodeData>> = ({ id, data, selected 
         )}
       </div>
 
-      {/* Per-Node [+] Branch Buttons (Left, Right, Bottom) */}
+      {/* Per-Node [+] Branch Buttons (Admin Only) */}
       {isAdmin && (
         <>
           {/* [+] Button Left */}
@@ -382,6 +386,7 @@ export const PlayoffBracketModal: React.FC<PlayoffBracketModalProps> = ({
 
   // Persist nodes and edges back to boards state and localStorage
   const saveCurrentBoardState = useCallback((updatedNodes: Node[], updatedEdges: Edge[]) => {
+    if (!isAdmin) return; // Only admin edits persist!
     setBoards(prevBoards => {
       const updated = prevBoards.map(b => {
         if (b.id === activeBoardId) {
@@ -396,10 +401,11 @@ export const PlayoffBracketModal: React.FC<PlayoffBracketModalProps> = ({
       localStorage.setItem('tsa_reactflow_bracket_boards_v3', JSON.stringify(updated));
       return updated;
     });
-  }, [activeBoardId]);
+  }, [activeBoardId, isAdmin]);
 
   // Handle edge connects manually drawn by admin
   const onConnect = useCallback((connection: Connection) => {
+    if (!isAdmin) return;
     setEdges(eds => {
       const newEdge: Edge = {
         ...connection,
@@ -411,18 +417,45 @@ export const PlayoffBracketModal: React.FC<PlayoffBracketModalProps> = ({
       saveCurrentBoardState(nodes, updated);
       return updated;
     });
-  }, [nodes, saveCurrentBoardState, setEdges]);
+  }, [isAdmin, nodes, saveCurrentBoardState, setEdges]);
+
+  // [요구사항 2] Keyboard (Backspace / Delete) Edge and Node Deletion Hooks
+  const onEdgesDelete = useCallback((deletedEdges: Edge[]) => {
+    if (!isAdmin) return;
+    const deletedIds = new Set(deletedEdges.map(e => e.id));
+    setEdges(eds => {
+      const updatedEdges = eds.filter(e => !deletedIds.has(e.id));
+      saveCurrentBoardState(nodes, updatedEdges);
+      return updatedEdges;
+    });
+  }, [isAdmin, nodes, saveCurrentBoardState, setEdges]);
+
+  const onNodesDelete = useCallback((deletedNodes: Node[]) => {
+    if (!isAdmin) return;
+    const deletedIds = new Set(deletedNodes.map(n => n.id));
+    setNodes(nds => {
+      const updatedNodes = nds.filter(n => !deletedIds.has(n.id));
+      setEdges(eds => {
+        const updatedEdges = eds.filter(e => !deletedIds.has(e.source) && !deletedIds.has(e.target));
+        saveCurrentBoardState(updatedNodes, updatedEdges);
+        return updatedEdges;
+      });
+      return updatedNodes;
+    });
+  }, [isAdmin, saveCurrentBoardState, setEdges, setNodes]);
 
   // Handlers for Node Data Updates
   const handleUpdateTitle = useCallback((nodeId: string, newTitle: string) => {
+    if (!isAdmin) return;
     setNodes(nds => {
       const updated = nds.map(n => n.id === nodeId ? { ...n, data: { ...n.data, roundTitle: newTitle } } : n);
       saveCurrentBoardState(updated, edges);
       return updated;
     });
-  }, [edges, saveCurrentBoardState, setNodes]);
+  }, [isAdmin, edges, saveCurrentBoardState, setNodes]);
 
   const handleUpdateTeam = useCallback((nodeId: string, side: 'home' | 'away', name: string) => {
+    if (!isAdmin) return;
     setNodes(nds => {
       const updated = nds.map(n => {
         if (n.id === nodeId) {
@@ -439,9 +472,10 @@ export const PlayoffBracketModal: React.FC<PlayoffBracketModalProps> = ({
       saveCurrentBoardState(updated, edges);
       return updated;
     });
-  }, [edges, saveCurrentBoardState, setNodes]);
+  }, [isAdmin, edges, saveCurrentBoardState, setNodes]);
 
   const handleUpdateScore = useCallback((nodeId: string, side: 'home' | 'away', score: number) => {
+    if (!isAdmin) return;
     setNodes(nds => {
       const updated = nds.map(n => {
         if (n.id === nodeId) {
@@ -458,9 +492,10 @@ export const PlayoffBracketModal: React.FC<PlayoffBracketModalProps> = ({
       saveCurrentBoardState(updated, edges);
       return updated;
     });
-  }, [edges, saveCurrentBoardState, setNodes]);
+  }, [isAdmin, edges, saveCurrentBoardState, setNodes]);
 
   const handleDeleteNode = useCallback((nodeId: string) => {
+    if (!isAdmin) return;
     if (!window.confirm('이 경기 노드와 연결선을 삭제하시겠습니까?')) return;
     setNodes(nds => {
       const updatedNodes = nds.filter(n => n.id !== nodeId);
@@ -471,10 +506,11 @@ export const PlayoffBracketModal: React.FC<PlayoffBracketModalProps> = ({
       });
       return updatedNodes;
     });
-  }, [saveCurrentBoardState, setEdges, setNodes]);
+  }, [isAdmin, saveCurrentBoardState, setEdges, setNodes]);
 
   // [+] Button handler to spawn child node & auto-connect solid white edge
   const handleAddChildNode = useCallback((parentId: string, direction: 'left' | 'right' | 'bottom') => {
+    if (!isAdmin) return;
     const parentNode = nodes.find(n => n.id === parentId);
     const parentPos = parentNode ? parentNode.position : { x: 400, y: 200 };
 
@@ -522,7 +558,7 @@ export const PlayoffBracketModal: React.FC<PlayoffBracketModalProps> = ({
     setNodes(updatedNodes);
     setEdges(updatedEdges);
     saveCurrentBoardState(updatedNodes, updatedEdges);
-  }, [nodes, edges, setNodes, setEdges, saveCurrentBoardState]);
+  }, [isAdmin, nodes, edges, setNodes, setEdges, saveCurrentBoardState]);
 
   // Inject callback functions & teams into node data
   const enrichedNodes = useMemo(() => {
@@ -544,6 +580,7 @@ export const PlayoffBracketModal: React.FC<PlayoffBracketModalProps> = ({
 
   // Add new Bracket Board
   const handleAddBoard = () => {
+    if (!isAdmin) return;
     const title = prompt('새로운 대진표 이름을 입력하세요 (예: 7위~9위 대진표, 여성부 2부 리그):');
     if (!title || !title.trim()) return;
 
@@ -579,6 +616,7 @@ export const PlayoffBracketModal: React.FC<PlayoffBracketModalProps> = ({
 
   // Delete Board
   const handleDeleteBoard = (boardId: string) => {
+    if (!isAdmin) return;
     if (boards.length <= 1) {
       alert('최소 1개 이상의 대진표는 유지되어야 합니다.');
       return;
@@ -593,6 +631,7 @@ export const PlayoffBracketModal: React.FC<PlayoffBracketModalProps> = ({
 
   // Add standalone Root Node
   const handleAddRootNode = () => {
+    if (!isAdmin) return;
     const newRootId = `root_${Date.now()}`;
     const newRoot: Node<MatchNodeData> = {
       id: newRootId,
@@ -614,6 +653,7 @@ export const PlayoffBracketModal: React.FC<PlayoffBracketModalProps> = ({
 
   // Save JSON
   const handleSaveToLocalStorage = () => {
+    if (!isAdmin) return;
     saveCurrentBoardState(nodes, edges);
     alert('대진표 무한 캔버스 데이터(노드 좌표 및 연결선)가 성공적으로 저장되었습니다!');
   };
@@ -631,18 +671,20 @@ export const PlayoffBracketModal: React.FC<PlayoffBracketModalProps> = ({
           </div>
           <div>
             <h1 className="text-base sm:text-lg font-black text-white tracking-tight flex items-center gap-2">
-              <span>TSA 피그마형 무한 캔버스 대진표 빌더 (React Flow)</span>
-              <span className="px-2.5 py-0.5 rounded-full bg-cyan-500 text-slate-950 font-black text-[10px] tracking-wider uppercase shadow-md">
-                FIGMA INFINITE CANVAS
+              <span>TSA 본선 대진표 시스템</span>
+              <span className={`px-2.5 py-0.5 rounded-full text-slate-950 font-black text-[10px] tracking-wider uppercase shadow-md ${isAdmin ? 'bg-cyan-500' : 'bg-amber-400'}`}>
+                {isAdmin ? 'ADMIN EDITOR MODE' : 'READ-ONLY VIEWER'}
               </span>
             </h1>
             <p className="text-xs text-slate-400">
-              마우스 드래그 이동(Pan) & 휠 줌(Zoom), 노드 자유 이동, 고무줄 하얀 실선 자동 연동 지원
+              {isAdmin 
+                ? '마우스 드래그 이동/줌 | 노드 자유 배치 | 클릭 후 Backspace/Delete 키로 선/노드 삭제 지원'
+                : '마우스 휠 줌(Zoom) & 화면 드래그(Pan) 전용 읽기 모드입니다.'}
             </p>
           </div>
         </div>
 
-        {/* Top Action Buttons & Close */}
+        {/* Top Action Buttons & Close (Admin Only Buttons) */}
         <div className="flex items-center space-x-2">
           {isAdmin && (
             <>
@@ -717,20 +759,31 @@ export const PlayoffBracketModal: React.FC<PlayoffBracketModalProps> = ({
         )}
       </div>
 
-      {/* Main React Flow Infinite Canvas Workspace */}
+      {/* Main React Flow Canvas Workspace (RBAC Read-only vs Admin Control) */}
       <div className="flex-1 w-full h-full bg-slate-950 relative">
         <ReactFlow
           nodes={enrichedNodes}
           edges={edges}
           onNodesChange={(changes) => {
+            if (!isAdmin) return; // Ignore dragging/movement for regular users
             onNodesChange(changes);
             saveCurrentBoardState(nodes, edges);
           }}
           onEdgesChange={(changes) => {
+            if (!isAdmin) return;
             onEdgesChange(changes);
             saveCurrentBoardState(nodes, edges);
           }}
-          onConnect={onConnect}
+          onConnect={isAdmin ? onConnect : undefined}
+          onEdgesDelete={isAdmin ? onEdgesDelete : undefined}
+          onNodesDelete={isAdmin ? onNodesDelete : undefined}
+          deleteKeyCode={isAdmin ? ['Backspace', 'Delete'] : null}
+          nodesDraggable={isAdmin}
+          nodesConnectable={isAdmin}
+          elementsSelectable={isAdmin}
+          panOnDrag={true}
+          zoomOnScroll={true}
+          zoomOnPinch={true}
           nodeTypes={nodeTypes}
           fitView
           fitViewOptions={{ padding: 0.2 }}
@@ -755,11 +808,11 @@ export const PlayoffBracketModal: React.FC<PlayoffBracketModalProps> = ({
       {/* Modal Bottom Footer Status Bar */}
       <div className="bg-slate-900 border-t border-slate-800 px-4 py-3 flex items-center justify-between text-xs text-slate-400 flex-shrink-0">
         <div className="flex items-center space-x-2">
-          <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-pulse" />
+          <span className={`w-2.5 h-2.5 rounded-full ${isAdmin ? 'bg-cyan-400 animate-pulse' : 'bg-amber-400'}`} />
           <span>
             {isAdmin 
-              ? '🔒 Figma 무한 캔버스: 마우스 드래그 이동/휠 줌 | 노드 자유 배치 | [+] 버튼 가지치기' 
-              : '👁️ 일반 사용자: Figma형 무한 캔버스 실시간 대진표 조회'}
+              ? '🔒 관리자 권한: 마우스 드래그 이동 | 선/노드 클릭 후 Backspace/Delete 키로 삭제 가능' 
+              : '👁️ 일반 사용자 읽기 모드: 줌(Zoom) & 이동(Pan) 전용 (노드 이동/수정 제한)'}
           </span>
         </div>
 
