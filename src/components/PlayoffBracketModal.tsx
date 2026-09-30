@@ -31,53 +31,55 @@ export interface MatchNodeData {
   onUpdateTeam?: (id: string, side: 'home' | 'away', name: string) => void;
   onUpdateScore?: (id: string, side: 'home' | 'away', score: number) => void;
   onDeleteNode?: (id: string) => void;
-  onAddChildNode?: (parentId: string, direction: 'left' | 'right' | 'bottom') => void;
+  onAddChildNode?: (parentId: string, direction: 'left' | 'right' | 'bottom' | 'top') => void;
 }
 
-// React Flow Figma-style Custom Node Component
+// React Flow Figma-style Custom Node Component (High Contrast Light Mode Card)
 const MatchNodeCard: React.FC<NodeProps<MatchNodeData>> = ({ id, data, selected }) => {
   const isFinal = data.isFinal || data.roundTitle?.includes('결승');
   const isAdmin = !!data.isAdmin;
 
   return (
     <div
-      className={`glass-panel rounded-2xl p-4 border-2 ${
+      className={`rounded-2xl p-4 border-2 ${
         isFinal
-          ? 'border-amber-400 bg-gradient-to-b from-amber-500/20 via-slate-900 to-slate-950 shadow-2xl shadow-amber-500/30'
+          ? 'border-amber-500 bg-gradient-to-b from-amber-500/10 via-white to-amber-100/40 shadow-2xl shadow-amber-500/20'
           : selected && isAdmin
-          ? 'border-white bg-slate-900 shadow-2xl scale-105'
-          : 'border-slate-700 bg-slate-900/95 shadow-xl'
-      } space-y-2.5 relative min-w-[270px] max-w-[300px] transition-all group hover:border-white`}
+          ? 'border-sky-600 ring-4 ring-sky-500/30 bg-white shadow-2xl scale-105'
+          : 'border-slate-300 bg-white shadow-xl'
+      } space-y-2.5 relative min-w-[270px] max-w-[300px] transition-all group hover:border-sky-500`}
     >
-      {/* Target & Source Handles for React Flow Lines (Hidden for Regular Users) */}
+      {/* Target & Source Handles for React Flow Lines (Explicit Handles) */}
       {isAdmin && (
         <>
-          <Handle type="target" position={Position.Left} id="target-left" className="!bg-white !w-3 !h-3 !border-2 !border-slate-950" />
-          <Handle type="target" position={Position.Right} id="target-right" className="!bg-white !w-3 !h-3 !border-2 !border-slate-950" />
-          <Handle type="target" position={Position.Top} id="target-top" className="!bg-white !w-3 !h-3 !border-2 !border-slate-950" />
+          <Handle type="target" position={Position.Left} id="target-left" className="!bg-sky-600 !w-3.5 !h-3.5 !border-2 !border-white shadow-md" />
+          <Handle type="target" position={Position.Right} id="target-right" className="!bg-sky-600 !w-3.5 !h-3.5 !border-2 !border-white shadow-md" />
+          <Handle type="target" position={Position.Top} id="target-top" className="!bg-sky-600 !w-3.5 !h-3.5 !border-2 !border-white shadow-md" />
+          <Handle type="target" position={Position.Bottom} id="target-bottom" className="!bg-sky-600 !w-3.5 !h-3.5 !border-2 !border-white shadow-md" />
 
-          <Handle type="source" position={Position.Left} id="source-left" className="!bg-white !w-3 !h-3 !border-2 !border-slate-950" />
-          <Handle type="source" position={Position.Right} id="source-right" className="!bg-white !w-3 !h-3 !border-2 !border-slate-950" />
-          <Handle type="source" position={Position.Bottom} id="source-bottom" className="!bg-white !w-3 !h-3 !border-2 !border-slate-950" />
+          <Handle type="source" position={Position.Left} id="source-left" className="!bg-sky-600 !w-3.5 !h-3.5 !border-2 !border-white shadow-md" />
+          <Handle type="source" position={Position.Right} id="source-right" className="!bg-sky-600 !w-3.5 !h-3.5 !border-2 !border-white shadow-md" />
+          <Handle type="source" position={Position.Top} id="source-top" className="!bg-sky-600 !w-3.5 !h-3.5 !border-2 !border-white shadow-md" />
+          <Handle type="source" position={Position.Bottom} id="source-bottom" className="!bg-sky-600 !w-3.5 !h-3.5 !border-2 !border-white shadow-md" />
         </>
       )}
 
       {/* Node Header: Round Title (Inline Editable for Admin, Read-only for Regular User) */}
-      <div className="flex items-center justify-between border-b border-slate-800 pb-2 gap-2">
+      <div className="flex items-center justify-between border-b border-slate-200 pb-2 gap-2">
         {isAdmin ? (
           <div className="flex items-center space-x-1 flex-1">
-            <Edit3 className="w-3.5 h-3.5 text-cyan-400 flex-shrink-0" />
+            <Edit3 className="w-3.5 h-3.5 text-sky-600 flex-shrink-0" />
             <input
               type="text"
               value={data.roundTitle || ''}
               onChange={(e) => data.onUpdateTitle?.(id, e.target.value)}
               placeholder="라운드명 입력 (예: 8강 1경기)"
-              className="bg-slate-950 text-cyan-400 font-bold border border-cyan-500/40 rounded px-2 py-0.5 text-xs focus:outline-none focus:border-white w-full nodrag"
+              className="bg-slate-50 text-sky-700 font-extrabold border border-slate-300 rounded px-2 py-0.5 text-xs focus:outline-none focus:border-sky-500 w-full nodrag"
               title="클릭하여 라운드 명칭을 직접 수정하세요"
             />
           </div>
         ) : (
-          <span className={`text-xs font-black ${isFinal ? 'text-amber-400' : 'text-cyan-400'}`}>
+          <span className={`text-xs font-black ${isFinal ? 'text-amber-600' : 'text-sky-700'}`}>
             {data.roundTitle} {data.dateStr ? `(${data.dateStr})` : ''}
           </span>
         )}
@@ -85,7 +87,7 @@ const MatchNodeCard: React.FC<NodeProps<MatchNodeData>> = ({ id, data, selected 
         {isAdmin && (
           <button
             onClick={() => data.onDeleteNode?.(id)}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-red-400 hover:bg-red-500/20 transition-colors flex-shrink-0 nodrag"
+            className="p-1.5 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors flex-shrink-0 nodrag"
             title="이 경기 노드 및 연결선 삭제"
           >
             <Trash2 className="w-4 h-4" />
@@ -94,12 +96,12 @@ const MatchNodeCard: React.FC<NodeProps<MatchNodeData>> = ({ id, data, selected 
       </div>
 
       {/* Home Team Slot */}
-      <div className="flex items-center justify-between text-xs font-bold text-white gap-2">
+      <div className="flex items-center justify-between text-xs font-bold text-slate-900 gap-2">
         {isAdmin ? (
           <select
             value={data.homeTeamName || ''}
             onChange={(e) => data.onUpdateTeam?.(id, 'home', e.target.value)}
-            className="bg-slate-950 border border-slate-800 rounded px-2 py-1 text-white text-xs font-bold focus:outline-none focus:border-cyan-400 truncate flex-1 nodrag"
+            className="bg-slate-50 border border-slate-300 rounded px-2 py-1 text-slate-900 text-xs font-bold focus:outline-none focus:border-sky-500 truncate flex-1 nodrag"
           >
             <option value={data.homeTeamName}>{data.homeTeamName || '참가팀 선택'}</option>
             {data.rawTeams?.map(t => (
@@ -107,7 +109,7 @@ const MatchNodeCard: React.FC<NodeProps<MatchNodeData>> = ({ id, data, selected 
             ))}
           </select>
         ) : (
-          <span className="truncate flex-1 font-bold text-slate-100">{data.homeTeamName}</span>
+          <span className="truncate flex-1 font-bold text-slate-900">{data.homeTeamName}</span>
         )}
 
         {isAdmin ? (
@@ -117,20 +119,20 @@ const MatchNodeCard: React.FC<NodeProps<MatchNodeData>> = ({ id, data, selected 
             value={data.homeScore ?? ''}
             onChange={(e) => data.onUpdateScore?.(id, 'home', parseInt(e.target.value) || 0)}
             placeholder="점수"
-            className="w-12 bg-slate-950 border border-slate-800 text-orange-400 font-extrabold text-center rounded py-1 text-xs nodrag"
+            className="w-12 bg-slate-50 border border-slate-300 text-orange-600 font-black text-center rounded py-1 text-xs nodrag"
           />
         ) : (
-          <span className="text-orange-400 font-extrabold ml-1 flex-shrink-0">{data.homeScore ?? '-'}</span>
+          <span className="text-orange-600 font-black ml-1 flex-shrink-0">{data.homeScore ?? '-'}</span>
         )}
       </div>
 
       {/* Away Team Slot */}
-      <div className="flex items-center justify-between text-xs font-semibold text-slate-300 border-t border-slate-800/80 pt-2 gap-2">
+      <div className="flex items-center justify-between text-xs font-semibold text-slate-700 border-t border-slate-100 pt-2 gap-2">
         {isAdmin ? (
           <select
             value={data.awayTeamName || ''}
             onChange={(e) => data.onUpdateTeam?.(id, 'away', e.target.value)}
-            className="bg-slate-950 border border-slate-800 rounded px-2 py-1 text-white text-xs font-bold focus:outline-none focus:border-cyan-400 truncate flex-1 nodrag"
+            className="bg-slate-50 border border-slate-300 rounded px-2 py-1 text-slate-900 text-xs font-bold focus:outline-none focus:border-sky-500 truncate flex-1 nodrag"
           >
             <option value={data.awayTeamName}>{data.awayTeamName || '참가팀 선택'}</option>
             {data.rawTeams?.map(t => (
@@ -138,7 +140,7 @@ const MatchNodeCard: React.FC<NodeProps<MatchNodeData>> = ({ id, data, selected 
             ))}
           </select>
         ) : (
-          <span className="truncate flex-1 font-semibold text-slate-300">{data.awayTeamName}</span>
+          <span className="truncate flex-1 font-semibold text-slate-700">{data.awayTeamName}</span>
         )}
 
         {isAdmin ? (
@@ -148,20 +150,29 @@ const MatchNodeCard: React.FC<NodeProps<MatchNodeData>> = ({ id, data, selected 
             value={data.awayScore ?? ''}
             onChange={(e) => data.onUpdateScore?.(id, 'away', parseInt(e.target.value) || 0)}
             placeholder="점수"
-            className="w-12 bg-slate-950 border border-slate-800 text-slate-300 font-extrabold text-center rounded py-1 text-xs nodrag"
+            className="w-12 bg-slate-50 border border-slate-300 text-slate-700 font-black text-center rounded py-1 text-xs nodrag"
           />
         ) : (
-          <span className="text-slate-400 ml-1 flex-shrink-0">{data.awayScore ?? '-'}</span>
+          <span className="text-slate-500 ml-1 flex-shrink-0">{data.awayScore ?? '-'}</span>
         )}
       </div>
 
-      {/* Per-Node [+] Branch Buttons (Admin Only) */}
+      {/* Per-Node [+] Branch Buttons (Admin Only: Top, Bottom, Left, Right) */}
       {isAdmin && (
         <>
+          {/* [+] Button Top */}
+          <button
+            onClick={() => data.onAddChildNode?.(id, 'top')}
+            className="absolute -top-4 left-1/2 -translate-x-1/2 w-8 h-8 rounded-full bg-sky-600 hover:bg-sky-500 text-white font-black text-xs shadow-lg border-2 border-white flex items-center justify-center transition-transform hover:scale-125 z-30 nodrag"
+            title="[+] 상단 하위 라운드 경기 노드 추가"
+          >
+            <Plus className="w-5 h-5 stroke-[3]" />
+          </button>
+
           {/* [+] Button Left */}
           <button
             onClick={() => data.onAddChildNode?.(id, 'left')}
-            className="absolute -left-4 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white hover:bg-cyan-300 text-slate-950 font-black text-xs shadow-2xl border-2 border-white flex items-center justify-center transition-transform hover:scale-125 z-30 nodrag"
+            className="absolute -left-4 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-sky-600 hover:bg-sky-500 text-white font-black text-xs shadow-lg border-2 border-white flex items-center justify-center transition-transform hover:scale-125 z-30 nodrag"
             title="[+] 좌측 하위 라운드 경기 노드 추가"
           >
             <Plus className="w-5 h-5 stroke-[3]" />
@@ -170,7 +181,7 @@ const MatchNodeCard: React.FC<NodeProps<MatchNodeData>> = ({ id, data, selected 
           {/* [+] Button Right */}
           <button
             onClick={() => data.onAddChildNode?.(id, 'right')}
-            className="absolute -right-4 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white hover:bg-cyan-300 text-slate-950 font-black text-xs shadow-2xl border-2 border-white flex items-center justify-center transition-transform hover:scale-125 z-30 nodrag"
+            className="absolute -right-4 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-sky-600 hover:bg-sky-500 text-white font-black text-xs shadow-lg border-2 border-white flex items-center justify-center transition-transform hover:scale-125 z-30 nodrag"
             title="[+] 우측 하위 라운드 경기 노드 추가"
           >
             <Plus className="w-5 h-5 stroke-[3]" />
@@ -179,7 +190,7 @@ const MatchNodeCard: React.FC<NodeProps<MatchNodeData>> = ({ id, data, selected 
           {/* [+] Button Bottom */}
           <button
             onClick={() => data.onAddChildNode?.(id, 'bottom')}
-            className="absolute -bottom-4 left-1/2 -translate-x-1/2 w-8 h-8 rounded-full bg-white hover:bg-cyan-300 text-slate-950 font-black text-xs shadow-2xl border-2 border-white flex items-center justify-center transition-transform hover:scale-125 z-30 nodrag"
+            className="absolute -bottom-4 left-1/2 -translate-x-1/2 w-8 h-8 rounded-full bg-sky-600 hover:bg-sky-500 text-white font-black text-xs shadow-lg border-2 border-white flex items-center justify-center transition-transform hover:scale-125 z-30 nodrag"
             title="[+] 하단 하위 라운드 경기 노드 추가"
           >
             <Plus className="w-5 h-5 stroke-[3]" />
@@ -213,7 +224,7 @@ export const PlayoffBracketModal: React.FC<PlayoffBracketModalProps> = ({
   // Register custom node type
   const nodeTypes = useMemo(() => ({ matchNode: MatchNodeCard }), []);
 
-  // Default initial boards
+  // Default initial boards with explicit handle mappings
   const defaultInitialBoards: BoardData[] = [
     {
       id: 'board-1',
@@ -222,7 +233,7 @@ export const PlayoffBracketModal: React.FC<PlayoffBracketModalProps> = ({
         {
           id: 'final-1',
           type: 'matchNode',
-          position: { x: 500, y: 250 },
+          position: { x: 480, y: 240 },
           data: {
             roundTitle: '🏆 챔피언십 결승전 (Finals)',
             homeTeamName: 'TSA 우먼스',
@@ -234,7 +245,7 @@ export const PlayoffBracketModal: React.FC<PlayoffBracketModalProps> = ({
         {
           id: 'sf-left-1',
           type: 'matchNode',
-          position: { x: 100, y: 150 },
+          position: { x: 120, y: 240 },
           data: {
             roundTitle: '4강 1경기 (좌측)',
             homeTeamName: 'TSA 우먼스',
@@ -247,7 +258,7 @@ export const PlayoffBracketModal: React.FC<PlayoffBracketModalProps> = ({
         {
           id: 'qf-left-1',
           type: 'matchNode',
-          position: { x: -300, y: 150 },
+          position: { x: -240, y: 240 },
           data: {
             roundTitle: '8강 1경기',
             homeTeamName: '1조 1위 (TSA 우먼스)',
@@ -260,7 +271,7 @@ export const PlayoffBracketModal: React.FC<PlayoffBracketModalProps> = ({
         {
           id: 'sf-right-1',
           type: 'matchNode',
-          position: { x: 900, y: 150 },
+          position: { x: 840, y: 240 },
           data: {
             roundTitle: '4강 2경기 (우측)',
             homeTeamName: '퀸즈 위너스',
@@ -273,7 +284,7 @@ export const PlayoffBracketModal: React.FC<PlayoffBracketModalProps> = ({
         {
           id: 'qf-right-1',
           type: 'matchNode',
-          position: { x: 1300, y: 150 },
+          position: { x: 1200, y: 240 },
           data: {
             roundTitle: '8강 2경기',
             homeTeamName: '3조 1위 (퀸즈 위너스)',
@@ -288,30 +299,38 @@ export const PlayoffBracketModal: React.FC<PlayoffBracketModalProps> = ({
         {
           id: 'e_qf_left_1_to_sf_left_1',
           source: 'qf-left-1',
+          sourceHandle: 'source-right',
           target: 'sf-left-1',
+          targetHandle: 'target-left',
           type: 'smoothstep',
-          style: { stroke: '#ffffff', strokeWidth: 2.5 }
+          style: { stroke: '#0284c7', strokeWidth: 3 }
         },
         {
           id: 'e_sf_left_1_to_final_1',
           source: 'sf-left-1',
+          sourceHandle: 'source-right',
           target: 'final-1',
+          targetHandle: 'target-left',
           type: 'smoothstep',
-          style: { stroke: '#ffffff', strokeWidth: 2.5 }
+          style: { stroke: '#0284c7', strokeWidth: 3 }
         },
         {
           id: 'e_sf_right_1_to_final_1',
           source: 'sf-right-1',
+          sourceHandle: 'source-left',
           target: 'final-1',
+          targetHandle: 'target-right',
           type: 'smoothstep',
-          style: { stroke: '#ffffff', strokeWidth: 2.5 }
+          style: { stroke: '#0284c7', strokeWidth: 3 }
         },
         {
           id: 'e_qf_right_1_to_sf_right_1',
           source: 'qf-right-1',
+          sourceHandle: 'source-left',
           target: 'sf-right-1',
+          targetHandle: 'target-right',
           type: 'smoothstep',
-          style: { stroke: '#ffffff', strokeWidth: 2.5 }
+          style: { stroke: '#0284c7', strokeWidth: 3 }
         }
       ]
     },
@@ -334,7 +353,7 @@ export const PlayoffBracketModal: React.FC<PlayoffBracketModalProps> = ({
         {
           id: 'sf-left-2',
           type: 'matchNode',
-          position: { x: 0, y: 200 },
+          position: { x: 40, y: 200 },
           data: {
             roundTitle: '5위/6위 결정 예선전',
             homeTeamName: '골든이글스 W',
@@ -349,16 +368,18 @@ export const PlayoffBracketModal: React.FC<PlayoffBracketModalProps> = ({
         {
           id: 'e_sf_left_2_to_final_2',
           source: 'sf-left-2',
+          sourceHandle: 'source-right',
           target: 'final-2',
+          targetHandle: 'target-left',
           type: 'smoothstep',
-          style: { stroke: '#ffffff', strokeWidth: 2.5 }
+          style: { stroke: '#0284c7', strokeWidth: 3 }
         }
       ]
     }
   ];
 
   const [boards, setBoards] = useState<BoardData[]>(() => {
-    const saved = localStorage.getItem('tsa_reactflow_bracket_boards_v3');
+    const saved = localStorage.getItem('tsa_reactflow_bracket_boards_v4');
     if (saved) {
       try {
         return JSON.parse(saved);
@@ -386,7 +407,7 @@ export const PlayoffBracketModal: React.FC<PlayoffBracketModalProps> = ({
 
   // Persist nodes and edges back to boards state and localStorage
   const saveCurrentBoardState = useCallback((updatedNodes: Node[], updatedEdges: Edge[]) => {
-    if (!isAdmin) return; // Only admin edits persist!
+    if (!isAdmin) return;
     setBoards(prevBoards => {
       const updated = prevBoards.map(b => {
         if (b.id === activeBoardId) {
@@ -398,7 +419,7 @@ export const PlayoffBracketModal: React.FC<PlayoffBracketModalProps> = ({
         }
         return b;
       });
-      localStorage.setItem('tsa_reactflow_bracket_boards_v3', JSON.stringify(updated));
+      localStorage.setItem('tsa_reactflow_bracket_boards_v4', JSON.stringify(updated));
       return updated;
     });
   }, [activeBoardId, isAdmin]);
@@ -411,7 +432,7 @@ export const PlayoffBracketModal: React.FC<PlayoffBracketModalProps> = ({
         ...connection,
         id: `e_${connection.source}_to_${connection.target}_${Date.now()}`,
         type: 'smoothstep',
-        style: { stroke: '#ffffff', strokeWidth: 2.5 }
+        style: { stroke: '#0284c7', strokeWidth: 3 }
       } as Edge;
       const updated = addEdge(newEdge, eds);
       saveCurrentBoardState(nodes, updated);
@@ -419,7 +440,7 @@ export const PlayoffBracketModal: React.FC<PlayoffBracketModalProps> = ({
     });
   }, [isAdmin, nodes, saveCurrentBoardState, setEdges]);
 
-  // [요구사항 2] Keyboard (Backspace / Delete) Edge and Node Deletion Hooks
+  // Keyboard (Backspace / Delete) Edge and Node Deletion Hooks
   const onEdgesDelete = useCallback((deletedEdges: Edge[]) => {
     if (!isAdmin) return;
     const deletedIds = new Set(deletedEdges.map(e => e.id));
@@ -508,34 +529,59 @@ export const PlayoffBracketModal: React.FC<PlayoffBracketModalProps> = ({
     });
   }, [isAdmin, saveCurrentBoardState, setEdges, setNodes]);
 
-  // [+] Button handler to spawn child node & auto-connect solid white edge
-  const handleAddChildNode = useCallback((parentId: string, direction: 'left' | 'right' | 'bottom') => {
+  // [요구사항 3] Directional [+] Button Handler with Strict Source/Target Handle ID Mapping & 40px Grid Snapping
+  const handleAddChildNode = useCallback((parentId: string, direction: 'left' | 'right' | 'bottom' | 'top') => {
     if (!isAdmin) return;
     const parentNode = nodes.find(n => n.id === parentId);
     const parentPos = parentNode ? parentNode.position : { x: 400, y: 200 };
 
     let offsetX = 0;
     let offsetY = 0;
+    let sourceId = parentId;
+    let targetId = '';
+    let sourceHandle = 'source-right';
+    let targetHandle = 'target-left';
+
+    const newNodeId = `node_${Date.now()}`;
 
     if (direction === 'left') {
       offsetX = -360;
-      offsetY = 40;
+      offsetY = 0;
+      sourceId = newNodeId;
+      targetId = parentId;
+      sourceHandle = 'source-right';
+      targetHandle = 'target-left';
     } else if (direction === 'right') {
       offsetX = 360;
-      offsetY = 40;
-    } else {
+      offsetY = 0;
+      sourceId = parentId;
+      targetId = newNodeId;
+      sourceHandle = 'source-right';
+      targetHandle = 'target-left';
+    } else if (direction === 'bottom') {
       offsetX = 0;
-      offsetY = 220;
+      offsetY = 200;
+      sourceId = parentId;
+      targetId = newNodeId;
+      sourceHandle = 'source-bottom';
+      targetHandle = 'target-top';
+    } else if (direction === 'top') {
+      offsetX = 0;
+      offsetY = -200;
+      sourceId = newNodeId;
+      targetId = parentId;
+      sourceHandle = 'source-bottom';
+      targetHandle = 'target-top';
     }
 
-    const newNodeId = `node_${Date.now()}`;
+    // [요구사항 2] Snap to 40px Grid Alignment
+    const snapX = Math.round((parentPos.x + offsetX) / 40) * 40;
+    const snapY = Math.round((parentPos.y + offsetY) / 40) * 40;
+
     const newNode: Node<MatchNodeData> = {
       id: newNodeId,
       type: 'matchNode',
-      position: {
-        x: parentPos.x + offsetX,
-        y: parentPos.y + offsetY
-      },
+      position: { x: snapX, y: snapY },
       data: {
         roundTitle: '하위 예선 경기',
         homeTeamName: '참가팀 선택',
@@ -545,11 +591,13 @@ export const PlayoffBracketModal: React.FC<PlayoffBracketModalProps> = ({
     };
 
     const newEdge: Edge = {
-      id: `e_${newNodeId}_to_${parentId}`,
-      source: direction === 'left' ? newNodeId : parentId,
-      target: direction === 'left' ? parentId : newNodeId,
+      id: `e_${sourceId}_to_${targetId}_${Date.now()}`,
+      source: sourceId,
+      target: targetId,
+      sourceHandle: sourceHandle,
+      targetHandle: targetHandle,
       type: 'smoothstep',
-      style: { stroke: '#ffffff', strokeWidth: 2.5 }
+      style: { stroke: '#0284c7', strokeWidth: 3 }
     };
 
     const updatedNodes = [...nodes, newNode];
@@ -610,7 +658,7 @@ export const PlayoffBracketModal: React.FC<PlayoffBracketModalProps> = ({
     const updated = [...boards, newBoard];
     setBoards(updated);
     setActiveBoardId(newBoardId);
-    localStorage.setItem('tsa_reactflow_bracket_boards_v3', JSON.stringify(updated));
+    localStorage.setItem('tsa_reactflow_bracket_boards_v4', JSON.stringify(updated));
     alert(`[${title.trim()}] 대진표 판이 생성되었습니다!`);
   };
 
@@ -626,7 +674,7 @@ export const PlayoffBracketModal: React.FC<PlayoffBracketModalProps> = ({
     const updated = boards.filter(b => b.id !== boardId);
     setBoards(updated);
     setActiveBoardId(updated[0].id);
-    localStorage.setItem('tsa_reactflow_bracket_boards_v3', JSON.stringify(updated));
+    localStorage.setItem('tsa_reactflow_bracket_boards_v4', JSON.stringify(updated));
   };
 
   // Add standalone Root Node
@@ -636,7 +684,7 @@ export const PlayoffBracketModal: React.FC<PlayoffBracketModalProps> = ({
     const newRoot: Node<MatchNodeData> = {
       id: newRootId,
       type: 'matchNode',
-      position: { x: 500, y: 300 },
+      position: { x: 480, y: 240 },
       data: {
         roundTitle: '🏆 신규 토너먼트 결승',
         homeTeamName: '참가팀 선택',
@@ -661,24 +709,24 @@ export const PlayoffBracketModal: React.FC<PlayoffBracketModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 w-screen h-screen bg-slate-950 flex flex-col overflow-hidden animate-fadeIn">
+    <div className="fixed inset-0 z-50 w-screen h-screen bg-slate-900 flex flex-col overflow-hidden animate-fadeIn">
       
       {/* Modal Top Header Bar */}
-      <div className="w-full bg-slate-900/90 border-b border-slate-800 px-4 py-3 flex items-center justify-between flex-shrink-0 gap-3">
+      <div className="w-full bg-slate-900 border-b border-slate-800 px-4 py-3 flex items-center justify-between flex-shrink-0 gap-3">
         <div className="flex items-center space-x-3">
-          <div className="p-2.5 rounded-2xl bg-gradient-to-tr from-cyan-500 to-blue-600 text-slate-950 shadow-lg shadow-cyan-500/20">
+          <div className="p-2.5 rounded-2xl bg-gradient-to-tr from-sky-500 to-blue-600 text-white shadow-lg shadow-sky-500/20">
             <Trophy className="w-6 h-6" />
           </div>
           <div>
             <h1 className="text-base sm:text-lg font-black text-white tracking-tight flex items-center gap-2">
-              <span>TSA 본선 대진표 시스템</span>
-              <span className={`px-2.5 py-0.5 rounded-full text-slate-950 font-black text-[10px] tracking-wider uppercase shadow-md ${isAdmin ? 'bg-cyan-500' : 'bg-amber-400'}`}>
-                {isAdmin ? 'ADMIN EDITOR MODE' : 'READ-ONLY VIEWER'}
+              <span>TSA 본선 대진표 시스템 (정갈한 화이트 캔버스 빌더)</span>
+              <span className={`px-2.5 py-0.5 rounded-full text-white font-black text-[10px] tracking-wider uppercase shadow-md ${isAdmin ? 'bg-sky-600' : 'bg-amber-500'}`}>
+                {isAdmin ? 'GRID SNAPPING EDITOR' : 'LIGHT VIEWER'}
               </span>
             </h1>
-            <p className="text-xs text-slate-400">
+            <p className="text-xs text-slate-300">
               {isAdmin 
-                ? '마우스 드래그 이동/줌 | 노드 자유 배치 | 클릭 후 Backspace/Delete 키로 선/노드 삭제 지원'
+                ? '스냅 투 그리드(Snap-to-Grid) 정렬 | 방향별 명확한 Handle 연결 | Backspace/Delete 키로 삭제'
                 : '마우스 휠 줌(Zoom) & 화면 드래그(Pan) 전용 읽기 모드입니다.'}
             </p>
           </div>
@@ -690,15 +738,15 @@ export const PlayoffBracketModal: React.FC<PlayoffBracketModalProps> = ({
             <>
               <button
                 onClick={handleAddRootNode}
-                className="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-cyan-400 border border-cyan-500/40 text-xs font-bold flex items-center space-x-1 transition-all whitespace-nowrap"
+                className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-sky-400 border border-sky-500/40 text-xs font-bold flex items-center space-x-1 transition-all whitespace-nowrap"
               >
-                <Plus className="w-4 h-4 text-cyan-400" />
+                <Plus className="w-4 h-4 text-sky-400" />
                 <span>+ 결승 노드 추가</span>
               </button>
 
               <button
                 onClick={handleSaveToLocalStorage}
-                className="px-3.5 py-1.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs flex items-center space-x-1 shadow-md shadow-cyan-500/20 active-press transition-all whitespace-nowrap"
+                className="px-3.5 py-1.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs flex items-center space-x-1 shadow-md shadow-sky-600/20 active-press transition-all whitespace-nowrap"
               >
                 <Save className="w-4 h-4" />
                 <span>💾 저장</span>
@@ -716,7 +764,7 @@ export const PlayoffBracketModal: React.FC<PlayoffBracketModalProps> = ({
       </div>
 
       {/* Multiple Brackets Tabs Navigation */}
-      <div className="w-full bg-slate-900/50 border-b border-slate-800/80 px-4 py-2 flex items-center justify-between flex-shrink-0 overflow-x-auto gap-3 scrollbar-none">
+      <div className="w-full bg-slate-900 border-b border-slate-800 px-4 py-2 flex items-center justify-between flex-shrink-0 overflow-x-auto gap-3 scrollbar-none">
         <div className="flex items-center space-x-2 overflow-x-auto scrollbar-none">
           {boards.map((b) => {
             const isActive = b.id === activeBoardId;
@@ -726,8 +774,8 @@ export const PlayoffBracketModal: React.FC<PlayoffBracketModalProps> = ({
                   onClick={() => setActiveBoardId(b.id)}
                   className={`px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center space-x-1.5 ${
                     isActive
-                      ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-slate-950 shadow-lg shadow-cyan-500/25 scale-105'
-                      : 'bg-slate-900 border border-slate-800 text-slate-400 hover:text-white'
+                      ? 'bg-gradient-to-r from-sky-500 to-blue-600 text-white shadow-lg shadow-sky-500/25 scale-105'
+                      : 'bg-slate-800 border border-slate-700 text-slate-300 hover:text-white'
                   }`}
                 >
                   <GitFork className="w-3.5 h-3.5" />
@@ -737,7 +785,7 @@ export const PlayoffBracketModal: React.FC<PlayoffBracketModalProps> = ({
                 {isAdmin && boards.length > 1 && isActive && (
                   <button
                     onClick={() => handleDeleteBoard(b.id)}
-                    className="p-1.5 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-colors"
                     title="대진표 탭 삭제"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
@@ -751,21 +799,21 @@ export const PlayoffBracketModal: React.FC<PlayoffBracketModalProps> = ({
         {isAdmin && (
           <button
             onClick={handleAddBoard}
-            className="px-3.5 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-cyan-400 border border-cyan-500/40 text-xs font-bold flex items-center space-x-1 transition-all whitespace-nowrap flex-shrink-0"
+            className="px-3.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-sky-400 border border-sky-500/40 text-xs font-bold flex items-center space-x-1 transition-all whitespace-nowrap flex-shrink-0"
           >
-            <Plus className="w-4 h-4 text-cyan-400" />
+            <Plus className="w-4 h-4 text-sky-400" />
             <span>+ 대진표 판 추가</span>
           </button>
         )}
       </div>
 
-      {/* Main React Flow Canvas Workspace (RBAC Read-only vs Admin Control) */}
-      <div className="flex-1 w-full h-full bg-slate-950 relative">
+      {/* Main React Flow Canvas Workspace (Clean White / Light Gray Background + Snap to Grid) */}
+      <div className="flex-1 w-full h-full bg-slate-100 relative">
         <ReactFlow
           nodes={enrichedNodes}
           edges={edges}
           onNodesChange={(changes) => {
-            if (!isAdmin) return; // Ignore dragging/movement for regular users
+            if (!isAdmin) return;
             onNodesChange(changes);
             saveCurrentBoardState(nodes, edges);
           }}
@@ -781,6 +829,8 @@ export const PlayoffBracketModal: React.FC<PlayoffBracketModalProps> = ({
           nodesDraggable={isAdmin}
           nodesConnectable={isAdmin}
           elementsSelectable={isAdmin}
+          snapToGrid={true}
+          snapGrid={[40, 40]}
           panOnDrag={true}
           zoomOnScroll={true}
           zoomOnPinch={true}
@@ -791,28 +841,29 @@ export const PlayoffBracketModal: React.FC<PlayoffBracketModalProps> = ({
           maxZoom={2}
           defaultEdgeOptions={{
             type: 'smoothstep',
-            style: { stroke: '#ffffff', strokeWidth: 2.5 }
+            style: { stroke: '#0284c7', strokeWidth: 3 }
           }}
-          className="bg-slate-950"
+          className="bg-slate-100"
         >
-          <Background color="#334155" variant={BackgroundVariant.Dots} gap={24} size={1.5} />
-          <Controls className="!bg-slate-900 !border-slate-800 !text-white !rounded-xl overflow-hidden shadow-2xl" />
+          {/* [요구사항 1] 화이트/라이트 그레이 톤 배경 + 도트 그리드 */}
+          <Background color="#cbd5e1" variant={BackgroundVariant.Dots} gap={24} size={1.5} />
+          <Controls className="!bg-white !border-slate-300 !text-slate-900 !rounded-xl overflow-hidden shadow-xl" />
           <MiniMap
-            nodeColor={(node) => (node.data?.isFinal ? '#f59e0b' : '#06b6d4')}
-            maskColor="rgba(15, 23, 42, 0.8)"
-            className="!bg-slate-900 !border-slate-800 !rounded-xl overflow-hidden shadow-2xl"
+            nodeColor={(node) => (node.data?.isFinal ? '#f59e0b' : '#0284c7')}
+            maskColor="rgba(241, 245, 249, 0.8)"
+            className="!bg-white !border-slate-300 !rounded-xl overflow-hidden shadow-xl"
           />
         </ReactFlow>
       </div>
 
       {/* Modal Bottom Footer Status Bar */}
-      <div className="bg-slate-900 border-t border-slate-800 px-4 py-3 flex items-center justify-between text-xs text-slate-400 flex-shrink-0">
+      <div className="bg-slate-900 border-t border-slate-800 px-4 py-3 flex items-center justify-between text-xs text-slate-300 flex-shrink-0">
         <div className="flex items-center space-x-2">
-          <span className={`w-2.5 h-2.5 rounded-full ${isAdmin ? 'bg-cyan-400 animate-pulse' : 'bg-amber-400'}`} />
+          <span className={`w-2.5 h-2.5 rounded-full ${isAdmin ? 'bg-sky-400 animate-pulse' : 'bg-amber-400'}`} />
           <span>
             {isAdmin 
-              ? '🔒 관리자 권한: 마우스 드래그 이동 | 선/노드 클릭 후 Backspace/Delete 키로 삭제 가능' 
-              : '👁️ 일반 사용자 읽기 모드: 줌(Zoom) & 이동(Pan) 전용 (노드 이동/수정 제한)'}
+              ? '🔒 스냅 투 그리드(Grid Snap) 적용됨: 40px 단위 정렬 | 방향별 엣지 100% 매핑 연결' 
+              : '👁️ 라이트 캔버스 뷰어: 줌(Zoom) & 이동(Pan) 전용'}
           </span>
         </div>
 
